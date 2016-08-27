@@ -47,12 +47,13 @@ Command line parameters:
 * `--host=ADDRESS` - select host address to bind to, default: IP env var or 0.0.0.0 ("any address")
 * `--no-browser` - suppress automatic web browser launching
 * `--browser=BROWSER` - specify browser to use instead of system default
-* `--quiet` - suppress logging
+* `--quiet | -q` - suppress logging
+* `--verbose | -V` - more logging (logs all requests, etc.)
 * `--open=PATH` - launch browser to PATH instead of server root
 * `--watch=PATH` - comma-separated string of paths to exclusively watch for changes (default: watch everything)
 * `--ignore=PATH` - comma-separated string of paths to ignore
 * `--ignorePattern=RGXP` - Regular expression of files to ignore (ie `.*\.jade`)
-* `--entry-file=PATH` - serve this file in place of missing files (useful for single page apps)
+* `--entry-file=PATH` - serve this file (server root relative) in place of missing files (useful for single page apps)
 * `--mount=ROUTE:PATH` - serve the paths contents under the defined route (multiple definitions possible)
 * `--spa` - translate requests from /abc to /#/abc (handy for Single Page Apps)
 * `--wait=MILLISECONDS` - wait for all changes, before reloading
@@ -109,6 +110,9 @@ module.exports = {
 };
 ```
 
+If using the node API, you can also directly pass a configuration object instead of a path to the module.
+
+
 Troubleshooting
 ---------------
 
@@ -130,6 +134,9 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 Version history
 ---------------
 
+* master (unreleased)
+	- Added `--verbose` cli option (logLevel 3) to log all requests and display warning when can't inject html file (@pavel)
+	- HTTPS configuration now also accepts a plain object (@pavel)
 * v1.1.0
 	- Proxy support (@pavel)
 	- Middleware support (@achandrasekar)
