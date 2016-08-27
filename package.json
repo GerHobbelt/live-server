@@ -26,14 +26,14 @@
     "proxy-middleware": "latest",
     "send": "latest",
     "serve-index": "1.8.0",
-    "stream-sink": "1.2.0",
+    "stream-sink": "2.0.0",
     "watchr": "2.6.0"
   },
   "devDependencies": {
-    "mocha": "2.5.3",
+    "mocha": "3.0.2",
     "supertest": "2.0.0",
-    "eslint": "3.2.0",
-    "jshint": "2.9.2"
+    "eslint": "3.4.0",
+    "jshint": "2.9.3"
   },
   "scripts": {
     "lint": "eslint live-server.js index.js",

@@ -1,190 +1,190 @@
 #!/usr/bin/env node
 var fs = require('fs'),
-	connect = require('connect'),
-	serveIndex = require('serve-index'),
-	logger = require('morgan'),
-	WebSocket = require('faye-websocket'),
-	path = require('path'),
-	url = require('url'),
-	http = require('http'),
-	send = require('send'),
-	formidable = require('formidable'),
-	open = require('opn'),
-	sink = require('stream-sink'),
-	marked = require('marked'),
-	es = require("event-stream"),
-	watchr = require('watchr');
+  connect = require('connect'),
+  serveIndex = require('serve-index'),
+  logger = require('morgan'),
+  WebSocket = require('faye-websocket'),
+  path = require('path'),
+  url = require('url'),
+  http = require('http'),
+  send = require('send'),
+  formidable = require('formidable'),
+  open = require('opn'),
+  sink = require('stream-sink'),
+  marked = require('marked'),
+  es = require("event-stream"),
+  watchr = require('watchr');
 require('colors');
 
 var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
 
 var LiveServer = {
-	server: null,
-	watchers: [],
-	logLevel: 2
+  server: null,
+  watchers: [],
+  logLevel: 2
 };
 
 var markdownStyles = {
-	'html': 'standard',
-	'hack': 'hack',
-	'hack-dark': 'hack dark',
-	'hack-light': 'hack'
+  'html': 'standard',
+  'hack': 'hack',
+  'hack-dark': 'hack dark',
+  'hack-light': 'hack'
 };
 
 function escape(html){
-	return String(html)
-		.replace(/&(?!\w+;)/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;');
+  return String(html)
+    .replace(/&(?!\w+;)/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // Based on connect.static(), but streamlined and with added code injecter
 function staticServer(root, spa) {
-	var isFile = false;
-	try { // For supporting mounting files instead of just directories
-		isFile = fs.statSync(root).isFile();
-	} catch (e) {
-		if (e.code !== "ENOENT") throw e;
-	}
-	return function(req, res, next) {
-		if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
-		var reqpath = isFile ? "" : url.parse(req.url).pathname;
-		var hasNoOrigin = !req.headers.origin;
-		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>") ];
-		var injectTag = null;
-		var injectMarkdown = false;
+  var isFile = false;
+  try { // For supporting mounting files instead of just directories
+    isFile = fs.statSync(root).isFile();
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+  }
+  return function (req, res, next) {
+    if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
+    var reqpath = isFile ? "" : url.parse(req.url).pathname;
+    var hasNoOrigin = !req.headers.origin;
+    var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>") ];
+    var injectTag = null;
+    var injectMarkdown = false;
 
-		// Single Page App - redirect handler
-		if (spa && req.url !== '/') {
-			var route = req.url;
-			req.url = '/';
-			res.statusCode = 302;
-			res.setHeader('Location', req.url + '#' + route);
-		}
+    // Single Page App - redirect handler
+    if (spa && req.url !== '/') {
+      var route = req.url;
+      req.url = '/';
+      res.statusCode = 302;
+      res.setHeader('Location', req.url + '#' + route);
+    }
 
-		function directory() {
-			var pathname = url.parse(req.originalUrl).pathname;
-			res.statusCode = 301;
-			res.setHeader('Location', pathname + '/');
-			res.end('Redirecting to ' + escape(pathname) + '/');
-		}
+    function directory() {
+      var pathname = url.parse(req.originalUrl).pathname;
+      res.statusCode = 301;
+      res.setHeader('Location', pathname + '/');
+      res.end('Redirecting to ' + escape(pathname) + '/');
+    }
 
-		function file(filepath /*, stat*/) {
-			var x = path.extname(filepath).toLocaleLowerCase(), match,
-					possibleExtensions = [ "", ".html", ".htm", ".xhtml", ".php", ".svg" ];
-			if (hasNoOrigin && (possibleExtensions.indexOf(x) > -1)) {
-				// TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
-				var contents = fs.readFileSync(filepath, "utf8");
-				for (var i = 0; i < injectCandidates.length; ++i) {
-					match = injectCandidates[i].exec(contents);
-					if (match) {
-						injectTag = match[0];
-						break;
-					}
-				}
-				if (injectTag === null && LiveServer.logLevel >= 3) {
-					console.warn("Failed to inject refresh script!".yellow,
-						"Couldn't find any of the tags ", injectCandidates, "from", filepath);
-				}
-			}
+    function file(filepath /*, stat*/) {
+      var x = path.extname(filepath).toLocaleLowerCase(), match,
+          possibleExtensions = [ "", ".html", ".htm", ".xhtml", ".php", ".svg" ];
+      if (hasNoOrigin && (possibleExtensions.indexOf(x) > -1)) {
+        // TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
+        var contents = fs.readFileSync(filepath, "utf8");
+        for (var i = 0; i < injectCandidates.length; ++i) {
+          match = injectCandidates[i].exec(contents);
+          if (match) {
+            injectTag = match[0];
+            break;
+          }
+        }
+        if (injectTag === null && LiveServer.logLevel >= 3) {
+          console.warn("Failed to inject refresh script!".yellow,
+            "Couldn't find any of the tags ", injectCandidates, "from", filepath);
+        }
+      }
 
-			if(LiveServer.markdownStyle && x === '.md') {
-				injectMarkdown = true;
-			}
-		}
+      if(LiveServer.markdownStyle && x === '.md') {
+        injectMarkdown = true;
+      }
+    }
 
-		function error(err) {
-			if (err.status === 404) return next();
-			next(err);
-		}
+    function error(err) {
+      if (err.status === 404) return next();
+      next(err);
+    }
 
-		function inject(stream) {
-			if (injectTag) {
-				// We need to modify the length given to browser
-				var len = INJECTED_CODE.length + res.getHeader('Content-Length');
+    function inject(stream) {
+      if (injectTag) {
+        // We need to modify the length given to browser
+        var len = INJECTED_CODE.length + res.getHeader('Content-Length');
 
-				res.setHeader('Content-Length', len);
-				var originalPipe = stream.pipe;
-				stream.pipe = function(res) {
-					originalPipe.call(stream, es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag)).pipe(res);
-				};
-			}
-			if(injectMarkdown) {
-				res.setHeader('Content-Type', 'text/html');
-				res.removeHeader('Content-Length');
-				// TODO: Modify the length given to the browser
-				var originalPipe = stream.pipe;
-				stream.pipe = function(res) {
-					originalPipe.call(stream, sink().on('data', function(md) {
-						var content = marked(md);
-						var html = fs.readFileSync(__dirname + '/markdown.html').toString();
-						html = html.replace('%content%', content);
-						html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle]);
-						res.write(html);
-						res.end();
-					}))
-				};
-			}
-		}
+        res.setHeader('Content-Length', len);
+        var originalPipe = stream.pipe;
+        stream.pipe = function (res) {
+          originalPipe.call(stream, es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag)).pipe(res);
+        };
+      }
+      if(injectMarkdown) {
+        res.setHeader('Content-Type', 'text/html');
+        res.removeHeader('Content-Length');
+        // TODO: Modify the length given to the browser
+        var originalPipe = stream.pipe;
+        stream.pipe = function (res) {
+          originalPipe.call(stream, sink().on('data', function (md) {
+            var content = marked(md);
+            var html = fs.readFileSync(__dirname + '/markdown.html').toString();
+            html = html.replace('%content%', content);
+            html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle]);
+            res.write(html);
+            res.end();
+          }));
+        };
+      }
+    }
 
-		if (req.method === "POST" || req.method === "PUT") {
-			var inlen = parseFloat(req.headers['content-length']);
-			var intype = req.headers['content-type'];
+    if (req.method === "POST" || req.method === "PUT") {
+      var inlen = parseFloat(req.headers['content-length']);
+      var intype = req.headers['content-type'];
 
-			console.log('request: ', req.method, req.url, req.headers, inlen, intype);
-	
-	    // parse a file upload
-	    var form = new formidable.IncomingForm();
+      console.log('request: ', req.method, req.url, req.headers, inlen, intype);
 
-		  form.parse(req, function(err, fields, files) {
-		  	console.log('request decoded fields and files: ', err, fields, files || files.length);
+      // parse a file upload
+      var form = new formidable.IncomingForm();
 
-	      // res.writeHead(200, {'content-type': 'text/plain'});
-	      // res.write('received upload:\n\n');
-	      // res.end(util.inspect({fields: fields, files: files}));
-				var resf = function (mode) {
-					return function (arg) {
-						console.log('response: ', mode, arguments, res.statusCode);
+      form.parse(req, function (err, fields, files) {
+        console.log('request decoded fields and files: ', err, fields, files || files.length);
 
-						res.statusCode = 200;
-						res.setHeader('Content-Type', 'text/plain');
-						res.removeHeader('Content-Length');
-			      res.write('received upload:\n\n' + files);
-			      res.end();
-			    }
-			  };
-				send(req, reqpath, { root: root })
-					.on('error', resf('error'))
-					.on('directory', resf('directory'))
-					.on('file', resf('file'))
-					.on('stream', resf('stream'))
-					.pipe(res);
+        // res.writeHead(200, {'content-type': 'text/plain'});
+        // res.write('received upload:\n\n');
+        // res.end(util.inspect({fields: fields, files: files}));
+        var resf = function (mode) {
+          return function (arg) {
+            console.log('response: ', mode, arguments, res.statusCode);
 
-			// var body = [];
-			// req.on('data', function(chunk) {
-			// 	console.log('request: receiving one chunk: ', req.method, req.url, req.headers, inlen, intype);
-			//   body.push(chunk);
-			// }).on('end', function() {
-			//   body = Buffer.concat(body).toString();
-			//   // at this point, `body` has the entire request body stored in it as a string
-			// 	console.log('request: all data recieved: ', req.method, req.url, req.headers, inlen, intype, body);
-				// send(req, reqpath, { root: root })
-				// 	.on('error', error)
-				// 	.on('directory', directory)
-				// 	.on('file', file)
-				// 	.on('stream', inject)
-				// 	.pipe(res);
-			});
-		} else {
-			send(req, reqpath, { root: root })
-				.on('error', error)
-				.on('directory', directory)
-				.on('file', file)
-				.on('stream', inject)
-				.pipe(res);
-		}
-	};
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'text/plain');
+            res.removeHeader('Content-Length');
+            res.write('received upload:\n\n' + files);
+            res.end();
+          };
+        };
+        send(req, reqpath, { root: root })
+          .on('error', resf('error'))
+          .on('directory', resf('directory'))
+          .on('file', resf('file'))
+          .on('stream', resf('stream'))
+          .pipe(res);
+
+      // var body = [];
+      // req.on('data', function (chunk) {
+      //  console.log('request: receiving one chunk: ', req.method, req.url, req.headers, inlen, intype);
+      //   body.push(chunk);
+      // }).on('end', function () {
+      //   body = Buffer.concat(body).toString();
+      //   // at this point, `body` has the entire request body stored in it as a string
+      //  console.log('request: all data recieved: ', req.method, req.url, req.headers, inlen, intype, body);
+        // send(req, reqpath, { root: root })
+        //  .on('error', error)
+        //  .on('directory', directory)
+        //  .on('file', file)
+        //  .on('stream', inject)
+        //  .pipe(res);
+      });
+    } else {
+      send(req, reqpath, { root: root })
+        .on('error', error)
+        .on('directory', directory)
+        .on('file', file)
+        .on('stream', inject)
+        .pipe(res);
+    }
+  };
 }
 
 /**
@@ -193,12 +193,12 @@ function staticServer(root, spa) {
  * @param file {string} Path to the entry point file
  */
 function entryPoint(staticHandler, file) {
-	if (!file) return function(req, res, next) { next(); };
+  if (!file) return function (req, res, next) { next(); };
 
-	return function(req, res, next) {
-		req.url = "/" + file;
-		staticHandler(req, res, next);
-	};
+  return function (req, res, next) {
+    req.url = "/" + file;
+    staticHandler(req, res, next);
+  };
 }
 
 /**
@@ -215,212 +215,212 @@ function entryPoint(staticHandler, file) {
  * @param file {string} Path to the entry point file
  * @param wait {number} Server will wait for all changes, before reloading
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
- * @param middleware {array} Append middleware to stack, e.g. [function(req, res, next) { next(); }].
+ * @param middleware {array} Append middleware to stack, e.g. [function (req, res, next) { next(); }].
  */
-LiveServer.start = function(options) {
-	options = options || {};
-	var host = options.host || '0.0.0.0';
-	var port = options.port !== undefined ? options.port : 8080; // 0 means random
-	var root = options.root || process.cwd();
-	var mount = options.mount || [];
-	var watchPaths = options.watch || [root];
-	LiveServer.logLevel = options.logLevel === undefined ? 2 : options.logLevel;
-	var openPath = (options.open === undefined || options.open === true) ?
-		"" : ((options.open === null || options.open === false) ? null : options.open);
-	var spa = options.spa || false;
-	if (options.noBrowser) openPath = null; // Backwards compatibility with 0.7.0
-	var file = options.file;
-	var staticServerHandler = staticServer(root, spa);
-	var wait = options.wait || 0;
-	var browser = options.browser || null;
-	var htpasswd = options.htpasswd || null;
-	var cors = options.cors || false;
-	var https = options.https || null;
-	var proxy = options.proxy || [];
-	var middleware = options.middleware || [];
-	LiveServer.markdownStyle = options.markdown;
+LiveServer.start = function (options) {
+  options = options || {};
+  var host = options.host || '0.0.0.0';
+  var port = options.port !== undefined ? options.port : 8080; // 0 means random
+  var root = options.root || process.cwd();
+  var mount = options.mount || [];
+  var watchPaths = options.watch || [root];
+  LiveServer.logLevel = options.logLevel === undefined ? 2 : options.logLevel;
+  var openPath = (options.open === undefined || options.open === true) ?
+    "" : ((options.open === null || options.open === false) ? null : options.open);
+  var spa = options.spa || false;
+  if (options.noBrowser) openPath = null; // Backwards compatibility with 0.7.0
+  var file = options.file;
+  var staticServerHandler = staticServer(root, spa);
+  var wait = options.wait || 0;
+  var browser = options.browser || null;
+  var htpasswd = options.htpasswd || null;
+  var cors = options.cors || false;
+  var https = options.https || null;
+  var proxy = options.proxy || [];
+  var middleware = options.middleware || [];
+  LiveServer.markdownStyle = options.markdown;
 
-	// Setup a web server
-	var app = connect();
+  // Setup a web server
+  var app = connect();
 
-	// Add logger. Level 2 logs only errors
-	if (LiveServer.logLevel == 2) {
-		app.use(logger('dev', {
-			skip: function (req, res) { return res.statusCode < 400; }
-		}));
-	// Level 2 or above logs all requests
-	} else if (LiveServer.logLevel > 2) {
-		app.use(logger('dev'));
-	}
-	// Add middleware
-	middleware.map(app.use.bind(app));
+  // Add logger. Level 2 logs only errors
+  if (LiveServer.logLevel == 2) {
+    app.use(logger('dev', {
+      skip: function (req, res) { return res.statusCode < 400; }
+    }));
+  // Level 2 or above logs all requests
+  } else if (LiveServer.logLevel > 2) {
+    app.use(logger('dev'));
+  }
+  // Add middleware
+  middleware.map(app.use.bind(app));
 
-	// Use http-auth if configured
-	if (htpasswd !== null) {
-		var auth = require('http-auth');
-		var basic = auth.basic({
-			realm: "Please authorize",
-			file: htpasswd
-		});
-		app.use(auth.connect(basic));
-	}
-	if (cors) {
-		app.use(require("cors")({
-			origin: true, // reflecting request origin
-			credentials: true // allowing requests with credentials
-		}));
-	}
-	mount.forEach(function(mountRule) {
-		var mountPath = path.resolve(process.cwd(), mountRule[1]);
-		if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
-			watchPaths.push(mountPath);
-		app.use(mountRule[0], staticServer(mountPath));
-		if (LiveServer.logLevel >= 1)
-			console.log('Mapping %s to "%s"', mountRule[0], mountPath);
-	});
-	proxy.forEach(function(proxyRule) {
-		var proxyOpts = url.parse(proxyRule[1]);
-		proxyOpts.via = true;
-		proxyOpts.preserveHost = true;
-		app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
-		if (LiveServer.logLevel >= 1)
-			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
-	});
-	app.use(staticServerHandler) // Custom static server
-		.use(entryPoint(staticServerHandler, file))
-		.use(serveIndex(root, { icons: true }));
+  // Use http-auth if configured
+  if (htpasswd !== null) {
+    var auth = require('http-auth');
+    var basic = auth.basic({
+      realm: "Please authorize",
+      file: htpasswd
+    });
+    app.use(auth.connect(basic));
+  }
+  if (cors) {
+    app.use(require("cors")({
+      origin: true, // reflecting request origin
+      credentials: true // allowing requests with credentials
+    }));
+  }
+  mount.forEach(function (mountRule) {
+    var mountPath = path.resolve(process.cwd(), mountRule[1]);
+    if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
+      watchPaths.push(mountPath);
+    app.use(mountRule[0], staticServer(mountPath));
+    if (LiveServer.logLevel >= 1)
+      console.log('Mapping %s to "%s"', mountRule[0], mountPath);
+  });
+  proxy.forEach(function (proxyRule) {
+    var proxyOpts = url.parse(proxyRule[1]);
+    proxyOpts.via = true;
+    proxyOpts.preserveHost = true;
+    app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
+    if (LiveServer.logLevel >= 1)
+      console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
+  });
+  app.use(staticServerHandler) // Custom static server
+    .use(entryPoint(staticServerHandler, file))
+    .use(serveIndex(root, { icons: true }));
 
-	var server, protocol;
-	if (https !== null) {
-		var httpsConfig = https;
-		if (typeof https === "string") {
-			httpsConfig = require(path.resolve(process.cwd(), https));
-		}
-		server = require("https").createServer(httpsConfig, app);
-		protocol = "https";
-	} else {
-		server = http.createServer(app);
-		protocol = "http";
-	}
+  var server, protocol;
+  if (https !== null) {
+    var httpsConfig = https;
+    if (typeof https === "string") {
+      httpsConfig = require(path.resolve(process.cwd(), https));
+    }
+    server = require("https").createServer(httpsConfig, app);
+    protocol = "https";
+  } else {
+    server = http.createServer(app);
+    protocol = "http";
+  }
 
-	// Handle server startup errors
-	server.addListener('error', function(e) {
-		if (e.code === 'EADDRINUSE') {
-			var serveURL = protocol + '://' + host + ':' + port;
-			console.log('%s is already in use. Trying another port.'.yellow, serveURL);
-			setTimeout(function() {
-				server.listen(0, host);
-			}, 1000);
-		} else {
-			console.error(e.toString().red);
-			LiveServer.shutdown();
-		}
-	});
+  // Handle server startup errors
+  server.addListener('error', function (e) {
+    if (e.code === 'EADDRINUSE') {
+      var serveURL = protocol + '://' + host + ':' + port;
+      console.log('%s is already in use. Trying another port.'.yellow, serveURL);
+      setTimeout(function () {
+        server.listen(0, host);
+      }, 1000);
+    } else {
+      console.error(e.toString().red);
+      LiveServer.shutdown();
+    }
+  });
 
-	// Handle successful server
-	server.addListener('listening', function(/*e*/) {
-		LiveServer.server = server;
+  // Handle successful server
+  server.addListener('listening', function (/*e*/) {
+    LiveServer.server = server;
 
-		var address = server.address();
-		var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : address.address;
-		var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+    var address = server.address();
+    var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : address.address;
+    var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
 
-		var serveURL = protocol + '://' + serveHost + ':' + address.port;
-		var openURL = protocol + '://' + openHost + ':' + address.port;
+    var serveURL = protocol + '://' + serveHost + ':' + address.port;
+    var openURL = protocol + '://' + openHost + ':' + address.port;
 
-		// Output
-		if (LiveServer.logLevel >= 1) {
-			if (serveURL === openURL)
-				console.log(("Serving \"%s\" at %s").green, root, serveURL);
-			else
-				console.log(("Serving \"%s\" at %s (%s)").green, root, openURL, serveURL);
-		}
+    // Output
+    if (LiveServer.logLevel >= 1) {
+      if (serveURL === openURL)
+        console.log(("Serving \"%s\" at %s").green, root, serveURL);
+      else
+        console.log(("Serving \"%s\" at %s (%s)").green, root, openURL, serveURL);
+    }
 
-		// Launch browser
-		if (openPath !== null)
-			open(openURL + openPath, {app: browser});
-	});
+    // Launch browser
+    if (openPath !== null)
+      open(openURL + openPath, {app: browser});
+  });
 
-	// Setup server to listen at port
-	server.listen(port, host);
+  // Setup server to listen at port
+  server.listen(port, host);
 
-	// WebSocket
-	var clients = [];
-	server.addListener('upgrade', function(request, socket, head) {
-		var ws = new WebSocket(request, socket, head);
-		ws.onopen = function() { ws.send('connected'); };
+  // WebSocket
+  var clients = [];
+  server.addListener('upgrade', function (request, socket, head) {
+    var ws = new WebSocket(request, socket, head);
+    ws.onopen = function () { ws.send('connected'); };
 
-		if (wait > 0) {
-			(function(ws) {
-				var wssend = ws.send;
-				var waitTimeout;
+    if (wait > 0) {
+      (function (ws) {
+        var wssend = ws.send;
+        var waitTimeout;
 
-				ws.send = function() {
-					var args = arguments;
-					if (waitTimeout) clearTimeout(waitTimeout);
-					waitTimeout = setTimeout(function(){
-						wssend.apply(ws, args);
-					}, wait);
-				};
-			})(ws);
-		}
+        ws.send = function () {
+          var args = arguments;
+          if (waitTimeout) clearTimeout(waitTimeout);
+          waitTimeout = setTimeout(function () {
+            wssend.apply(ws, args);
+          }, wait);
+        };
+      })(ws);
+    }
 
-		ws.onclose = function() {
-			clients = clients.filter(function (x) {
-				return x !== ws;
-			});
-		};
+    ws.onclose = function () {
+      clients = clients.filter(function (x) {
+        return x !== ws;
+      });
+    };
 
-		clients.push(ws);
-	});
+    clients.push(ws);
+  });
 
-	// Setup file watcher
-	watchr.watch({
-		paths: watchPaths,
-		ignorePaths: options.ignore || false,
-		ignoreCommonPatterns: true,
-		ignoreHiddenFiles: true,
-		ignoreCustomPatterns: options.ignorePattern || null,
-		preferredMethods: [ 'watchFile', 'watch' ],
-		interval: 1407,
-		listeners: {
-			error: function(err) {
-				console.log("ERROR:".red, err);
-			},
-			change: function(eventName, filePath /*, fileCurrentStat, filePreviousStat*/) {
-				clients.forEach(function(ws) {
-					if (!ws) return;
-					if (path.extname(filePath) === ".css") {
-						ws.send('refreshcss');
-						if (LiveServer.logLevel >= 1)
-							console.log("CSS change detected".magenta, filePath);
-					} else {
-						ws.send('reload');
-						if (LiveServer.logLevel >= 1)
-							console.log("File change detected".cyan, filePath);
-					}
-				});
-			}
-		},
-		next: function(err, watchers) {
-			if (err)
-				console.error("Error watching files:".red, err);
-			LiveServer.watchers = watchers;
-		}
-	});
+  // Setup file watcher
+  watchr.watch({
+    paths: watchPaths,
+    ignorePaths: options.ignore || false,
+    ignoreCommonPatterns: true,
+    ignoreHiddenFiles: true,
+    ignoreCustomPatterns: options.ignorePattern || null,
+    preferredMethods: [ 'watchFile', 'watch' ],
+    interval: 1407,
+    listeners: {
+      error: function (err) {
+        console.log("ERROR:".red, err);
+      },
+      change: function (eventName, filePath /*, fileCurrentStat, filePreviousStat*/) {
+        clients.forEach(function (ws) {
+          if (!ws) return;
+          if (path.extname(filePath) === ".css") {
+            ws.send('refreshcss');
+            if (LiveServer.logLevel >= 1)
+              console.log("CSS change detected".magenta, filePath);
+          } else {
+            ws.send('reload');
+            if (LiveServer.logLevel >= 1)
+              console.log("File change detected".cyan, filePath);
+          }
+        });
+      }
+    },
+    next: function (err, watchers) {
+      if (err)
+        console.error("Error watching files:".red, err);
+      LiveServer.watchers = watchers;
+    }
+  });
 
-	return server;
+  return server;
 };
 
-LiveServer.shutdown = function() {
-	var watchers = LiveServer.watchers;
-	if (watchers) {
-		for (var i = 0; i < watchers.length; ++i)
-			watchers[i].close();
-	}
-	var server = LiveServer.server;
-	if (server)
-		server.close();
+LiveServer.shutdown = function () {
+  var watchers = LiveServer.watchers;
+  if (watchers) {
+    for (var i = 0; i < watchers.length; ++i)
+      watchers[i].close();
+  }
+  var server = LiveServer.server;
+  if (server)
+    server.close();
 };
 
 module.exports = LiveServer;
