@@ -13,7 +13,8 @@ var fs = require('fs'),
   sink = require('stream-sink'),
   marked = require('marked'),
   es = require("event-stream"),
-  watchr = require('watchr');
+  watchr = require('watchr'),
+  mkdirp = require('mkdirp');
 require('colors');
 
 var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
@@ -39,7 +40,7 @@ function escape(html){
     .replace(/"/g, '&quot;');
 }
 
-// Based on connect.static(), but streamlined and with added code injecter
+// Based on connect.static(), but streamlined and with added code injector
 function staticServer(root, spa) {
   var isFile = false;
   try { // For supporting mounting files instead of just directories
@@ -70,23 +71,31 @@ function staticServer(root, spa) {
       res.end('Redirecting to ' + escape(pathname) + '/');
     }
 
+    function find_inject_tag(filepath, contents) {
+      var match;
+
+      injectTag = null;
+      for (var i = 0; i < injectCandidates.length; ++i) {
+        match = injectCandidates[i].exec(contents);
+        if (match) {
+          injectTag = match[0];
+          break;
+        }
+      }
+      if (injectTag === null && LiveServer.logLevel >= 3) {
+        console.warn("Failed to inject refresh script!".yellow,
+          "Couldn't find any of the tags ", injectCandidates, "from", filepath);
+      }
+    }
+
     function file(filepath /*, stat*/) {
       var x = path.extname(filepath).toLocaleLowerCase(), match,
           possibleExtensions = [ "", ".html", ".htm", ".xhtml", ".php", ".svg" ];
       if (hasNoOrigin && (possibleExtensions.indexOf(x) > -1)) {
         // TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
         var contents = fs.readFileSync(filepath, "utf8");
-        for (var i = 0; i < injectCandidates.length; ++i) {
-          match = injectCandidates[i].exec(contents);
-          if (match) {
-            injectTag = match[0];
-            break;
-          }
-        }
-        if (injectTag === null && LiveServer.logLevel >= 3) {
-          console.warn("Failed to inject refresh script!".yellow,
-            "Couldn't find any of the tags ", injectCandidates, "from", filepath);
-        }
+        
+        find_inject_tag(filepath, contents);
       }
 
       if (LiveServer.markdownStyle && x === '.md') {
@@ -122,6 +131,13 @@ function staticServer(root, spa) {
             var html = fs.readFileSync(__dirname + '/markdown.html').toString();
             html = html.replace('%content%', content);
             html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle]);
+        
+            find_inject_tag(filepath, html);
+            if (injectTag) {
+              html = html.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag);
+            }
+
+            s.setHeader('Content-Length', html.length);
             s.write(html);
             s.end();
           });
@@ -139,43 +155,98 @@ function staticServer(root, spa) {
       var form = new formidable.IncomingForm();
 
       form.parse(req, function (err, fields, files) {
-        console.log('request decoded fields and files: ', err, fields, files || files.length);
+        console.log('request decoded fields and files: ', {
+          err: err, 
+          fields: fields, 
+          filelist: files
+        });
 
-        // res.writeHead(200, {'content-type': 'text/plain'});
-        // res.write('received upload:\n\n');
-        // res.end(util.inspect({fields: fields, files: files}));
-        var resf = function (mode) {
-          return function () {
-            console.log('response: ', mode, arguments, res.statusCode);
+        var cbCalled = [];
+        var fileResults = [];
+        var filelst4response = [];
 
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'text/plain');
-            res.removeHeader('Content-Length');
-            res.write('received upload:\n\n' + files);
-            res.end();
+        function copy_file_closure(ii) {
+          function done(n, ex, msg) {
+            console.warn('file copy done? ', ii, n, msg, ex, cbCalled);
+
+            if (!cbCalled[n]) {
+              fileResults[n] = {
+                msg: msg,
+                ex: ex
+              };
+              cbCalled[n] = true;
+            }
+
+            // check if all uploaded files have been processed, one way or another:
+            var is_done = true;
+            for (var j = 0, len = cbCalled.length; i < len; i++) {
+              if (!cbCalled[j]) {
+                is_done = false;
+                break;
+              }
+            }
+            if (is_done) {
+              resf('done', cbCalled.length, ii, n);
+            }
+          }
+
+          return function copy(srcpath, dstpath) {
+            var rd = fs.createReadStream(srcpath);
+            rd.on("error", function (ex) {
+              done(ii, ex, "copying file from temporary storage");
+            });
+
+            filelst4response.push(dstpath);
+
+            mkdirp.sync(path.dirname(dstpath));
+
+            var wr = fs.createWriteStream(dstpath);
+            wr.on("error", function(ex) {
+              done(ii, ex, "writing uploaded file to storage");
+            });
+            wr.on("close", function(ex) {
+              done(ii, ex, "closing uploaded file");
+            });
+            rd.pipe(wr);
           };
-        };
-        send(req, reqpath, { root: root })
-          .on('error', resf('error'))
-          .on('directory', resf('directory'))
-          .on('file', resf('file'))
-          .on('stream', resf('stream'))
-          .pipe(res);
+        }
 
-      // var body = [];
-      // req.on('data', function (chunk) {
-      //  console.log('request: receiving one chunk: ', req.method, req.url, req.headers, inlen, intype);
-      //   body.push(chunk);
-      // }).on('end', function () {
-      //   body = Buffer.concat(body).toString();
-      //   // at this point, `body` has the entire request body stored in it as a string
-      //  console.log('request: all data recieved: ', req.method, req.url, req.headers, inlen, intype, body);
-        // send(req, reqpath, { root: root })
-        //  .on('error', error)
-        //  .on('directory', directory)
-        //  .on('file', file)
-        //  .on('stream', inject)
-        //  .pipe(res);
+        var i = 0;
+        for (var key in files) {
+          // copy file:
+          var file_info = files[key];
+          console.log('processing uploaded file: ', root, reqpath, file_info.name, file_info.type, file_info.size, file_info.path, file_info.lastModifiedDate);
+
+          // when no actual file was uploaded in this slot, skip the slot!
+          if (!file_info.name) continue;
+
+          var dstpath = root + '/' + reqpath + '/' + file_info.name.replace(/^[^a-z0-9_]/i, '_').replace(/[^a-z0-9_]$/i, '_').replace(/[^a-z0-9_\-\.]/i, '_');
+          var dstpath2 = path.normalize(dstpath);
+          console.log('dstpath: ', dstpath, dstpath2, path.dirname(dstpath2));
+          
+          // closure:
+          var cp = copy_file_closure(i);
+
+          cbCalled[i] = false;
+          i++;
+
+          cp(file_info.path, dstpath2);
+        }
+        // and when there are no files at all...
+        if (i === 0) {
+          console.log('no files uploaded at all!');
+          resf('done', i);
+        }
+
+        function resf(mode) {
+          console.log('response: ', mode, arguments, res.statusCode);
+
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/plain');
+          res.removeHeader('Content-Length');
+          res.write('received upload:\n\n' + filelst4response.length + ' files:\n\n' + filelst4response.join('\n') + '\n\n' + JSON.stringify(fileResults));
+          res.end();
+        };
       });
     } else {
       send(req, reqpath, { root: root })
