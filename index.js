@@ -117,14 +117,14 @@ function staticServer(root, spa) {
         // TODO: Modify the length given to the browser
         originalPipe = stream.pipe;
         stream.pipe = function (s) {
-          originalPipe.call(stream, sink().on('data', function (md) {
+          originalPipe.call(stream, sink()).then(function (md) {
             var content = marked(md);
             var html = fs.readFileSync(__dirname + '/markdown.html').toString();
             html = html.replace('%content%', content);
             html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle]);
             s.write(html);
             s.end();
-          }));
+          });
         };
       }
     }
