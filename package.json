@@ -1,6 +1,6 @@
 {
   "name": "live-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "simple development http server with live reload capability",
   "keywords": [
     "front-end",
@@ -13,26 +13,27 @@
   "author": "Tapio Vierros",
   "dependencies": {
     "colors": "latest",
-    "connect": "3.4.x",
+    "connect": "3.4.1",
     "cors": "latest",
-    "proxy-middleware": "latest",
     "event-stream": "latest",
-    "faye-websocket": "0.11.x",
-    "http-auth": "2.3.x",
-    "marked": "^0.3.5",
-    "morgan": "^1.6.1",
+    "faye-websocket": "0.11.0",
+    "formidable": "1.0.17",
+    "http-auth": "2.4.4",
+    "marked": "0.3.6",
+    "morgan": "1.7.0",
     "object-assign": "latest",
     "opn": "latest",
+    "proxy-middleware": "latest",
     "send": "latest",
-    "serve-index": "^1.7.2",
-    "stream-sink": "^1.2.0",
-    "watchr": "2.3.x"
+    "serve-index": "1.8.0",
+    "stream-sink": "1.2.0",
+    "watchr": "2.6.0"
   },
   "devDependencies": {
-    "mocha": "^2.3.3",
-    "supertest": "^1.0.1",
-    "eslint": "^2.8.0",
-    "jshint": "^2.9.2"
+    "mocha": "2.5.3",
+    "supertest": "2.0.0",
+    "eslint": "3.2.0",
+    "jshint": "2.9.2"
   },
   "scripts": {
     "lint": "eslint live-server.js index.js",

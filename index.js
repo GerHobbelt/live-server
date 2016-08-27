@@ -8,6 +8,7 @@ var fs = require('fs'),
 	url = require('url'),
 	http = require('http'),
 	send = require('send'),
+	formidable = require('formidable'),
 	open = require('opn'),
 	sink = require('stream-sink'),
 	marked = require('marked'),
@@ -47,7 +48,7 @@ function staticServer(root, spa) {
 		if (e.code !== "ENOENT") throw e;
 	}
 	return function(req, res, next) {
-		if (req.method !== "GET" && req.method !== "HEAD") return next();
+		if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
 		var reqpath = isFile ? "" : url.parse(req.url).pathname;
 		var hasNoOrigin = !req.headers.origin;
 		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>") ];
@@ -102,6 +103,7 @@ function staticServer(root, spa) {
 			if (injectTag) {
 				// We need to modify the length given to browser
 				var len = INJECTED_CODE.length + res.getHeader('Content-Length');
+
 				res.setHeader('Content-Length', len);
 				var originalPipe = stream.pipe;
 				stream.pipe = function(res) {
@@ -126,12 +128,62 @@ function staticServer(root, spa) {
 			}
 		}
 
-		send(req, reqpath, { root: root })
-			.on('error', error)
-			.on('directory', directory)
-			.on('file', file)
-			.on('stream', inject)
-			.pipe(res);
+		if (req.method === "POST" || req.method === "PUT") {
+			var inlen = parseFloat(req.headers['content-length']);
+			var intype = req.headers['content-type'];
+
+			console.log('request: ', req.method, req.url, req.headers, inlen, intype);
+	
+	    // parse a file upload
+	    var form = new formidable.IncomingForm();
+
+		  form.parse(req, function(err, fields, files) {
+		  	console.log('request decoded fields and files: ', err, fields, files || files.length);
+
+	      // res.writeHead(200, {'content-type': 'text/plain'});
+	      // res.write('received upload:\n\n');
+	      // res.end(util.inspect({fields: fields, files: files}));
+				var resf = function (mode) {
+					return function (arg) {
+						console.log('response: ', mode, arguments, res.statusCode);
+
+						res.statusCode = 200;
+						res.setHeader('Content-Type', 'text/plain');
+						res.removeHeader('Content-Length');
+			      res.write('received upload:\n\n' + files);
+			      res.end();
+			    }
+			  };
+				send(req, reqpath, { root: root })
+					.on('error', resf('error'))
+					.on('directory', resf('directory'))
+					.on('file', resf('file'))
+					.on('stream', resf('stream'))
+					.pipe(res);
+
+			// var body = [];
+			// req.on('data', function(chunk) {
+			// 	console.log('request: receiving one chunk: ', req.method, req.url, req.headers, inlen, intype);
+			//   body.push(chunk);
+			// }).on('end', function() {
+			//   body = Buffer.concat(body).toString();
+			//   // at this point, `body` has the entire request body stored in it as a string
+			// 	console.log('request: all data recieved: ', req.method, req.url, req.headers, inlen, intype, body);
+				// send(req, reqpath, { root: root })
+				// 	.on('error', error)
+				// 	.on('directory', directory)
+				// 	.on('file', file)
+				// 	.on('stream', inject)
+				// 	.pipe(res);
+			});
+		} else {
+			send(req, reqpath, { root: root })
+				.on('error', error)
+				.on('directory', directory)
+				.on('file', file)
+				.on('stream', inject)
+				.pipe(res);
+		}
 	};
 }
 
