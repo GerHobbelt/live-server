@@ -153,6 +153,8 @@ function staticServer(root, spa) {
 
       // parse a file upload
       var form = new formidable.IncomingForm();
+      // https://github.com/felixge/node-formidable  /  https://github.com/felixge/node-formidable/commit/228788774ba83f2f8cd93756bed9662ffb24e72f  /  https://github.com/felixge/node-formidable/issues/33
+      form.multiples = true;
 
       form.parse(req, function (err, fields, files) {
         console.log('request decoded fields and files: ', {
@@ -179,7 +181,7 @@ function staticServer(root, spa) {
 
             // check if all uploaded files have been processed, one way or another:
             var is_done = true;
-            for (var j = 0, len = cbCalled.length; i < len; i++) {
+            for (var j = 0, len = cbCalled.length; j < len; j++) {
               if (!cbCalled[j]) {
                 is_done = false;
                 break;
@@ -211,14 +213,11 @@ function staticServer(root, spa) {
           };
         }
 
-        var i = 0;
-        for (var key in files) {
-          // copy file:
-          var file_info = files[key];
+        function do_one_file(file_info) {
           console.log('processing uploaded file: ', root, reqpath, file_info.name, file_info.type, file_info.size, file_info.path, file_info.lastModifiedDate);
 
           // when no actual file was uploaded in this slot, skip the slot!
-          if (!file_info.name) continue;
+          if (!file_info.name) return;
 
           var dstpath = root + '/' + reqpath + '/' + file_info.name.replace(/^[^a-z0-9_]/i, '_').replace(/[^a-z0-9_]$/i, '_').replace(/[^a-z0-9_\-\.]/i, '_');
           var dstpath2 = path.normalize(dstpath);
@@ -232,6 +231,23 @@ function staticServer(root, spa) {
 
           cp(file_info.path, dstpath2);
         }
+
+        var i = 0;
+        for (var key in files) {
+          // copy file:
+          var file_infos = files[key];
+          console.log('file_infos: ', file_infos, file_infos.length);
+          if (file_infos.length > 0) {
+            for (var i2 = 0, fcnt = file_infos.length; i2 < fcnt; i2++) {
+              var file_info = file_infos[i2];
+
+              do_one_file(file_info);
+            } 
+          } else {
+            do_one_file(file_infos);
+          }
+        }
+
         // and when there are no files at all...
         if (i === 0) {
           console.log('no files uploaded at all!');
