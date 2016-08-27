@@ -89,7 +89,7 @@ function staticServer(root, spa) {
         }
       }
 
-      if(LiveServer.markdownStyle && x === '.md') {
+      if (LiveServer.markdownStyle && x === '.md') {
         injectMarkdown = true;
       }
     }
@@ -100,29 +100,30 @@ function staticServer(root, spa) {
     }
 
     function inject(stream) {
+      var originalPipe;
       if (injectTag) {
         // We need to modify the length given to browser
         var len = INJECTED_CODE.length + res.getHeader('Content-Length');
 
         res.setHeader('Content-Length', len);
-        var originalPipe = stream.pipe;
-        stream.pipe = function (res) {
-          originalPipe.call(stream, es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag)).pipe(res);
+        originalPipe = stream.pipe;
+        stream.pipe = function (s) {
+          originalPipe.call(stream, es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag)).pipe(s);
         };
       }
-      if(injectMarkdown) {
+      if (injectMarkdown) {
         res.setHeader('Content-Type', 'text/html');
         res.removeHeader('Content-Length');
         // TODO: Modify the length given to the browser
-        var originalPipe = stream.pipe;
-        stream.pipe = function (res) {
+        originalPipe = stream.pipe;
+        stream.pipe = function (s) {
           originalPipe.call(stream, sink().on('data', function (md) {
             var content = marked(md);
             var html = fs.readFileSync(__dirname + '/markdown.html').toString();
             html = html.replace('%content%', content);
             html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle]);
-            res.write(html);
-            res.end();
+            s.write(html);
+            s.end();
           }));
         };
       }
@@ -144,7 +145,7 @@ function staticServer(root, spa) {
         // res.write('received upload:\n\n');
         // res.end(util.inspect({fields: fields, files: files}));
         var resf = function (mode) {
-          return function (arg) {
+          return function () {
             console.log('response: ', mode, arguments, res.statusCode);
 
             res.statusCode = 200;
@@ -244,7 +245,7 @@ LiveServer.start = function (options) {
   var app = connect();
 
   // Add logger. Level 2 logs only errors
-  if (LiveServer.logLevel == 2) {
+  if (LiveServer.logLevel === 2) {
     app.use(logger('dev', {
       skip: function (req, res) { return res.statusCode < 400; }
     }));
@@ -348,21 +349,21 @@ LiveServer.start = function (options) {
   var clients = [];
   server.addListener('upgrade', function (request, socket, head) {
     var ws = new WebSocket(request, socket, head);
-    ws.onopen = function () { ws.send('connected'); };
+    ws.onopen = function () { 
+      ws.send('connected'); 
+    };
 
     if (wait > 0) {
-      (function (ws) {
-        var wssend = ws.send;
-        var waitTimeout;
+      var wssend = ws.send;
+      var waitTimeout;
 
-        ws.send = function () {
-          var args = arguments;
-          if (waitTimeout) clearTimeout(waitTimeout);
-          waitTimeout = setTimeout(function () {
-            wssend.apply(ws, args);
-          }, wait);
-        };
-      })(ws);
+      ws.send = function () {
+        var args = arguments;
+        if (waitTimeout) clearTimeout(waitTimeout);
+        waitTimeout = setTimeout(function () {
+          wssend.apply(ws, args);
+        }, wait);
+      };
     }
 
     ws.onclose = function () {
