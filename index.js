@@ -83,7 +83,7 @@ function staticServer(root, spa) {
 						break;
 					}
 				}
-				if (injectTag === null && LiveServer.logLevel >= 2) {
+				if (injectTag === null && LiveServer.logLevel >= 3) {
 					console.warn("Failed to inject refresh script!".yellow,
 						"Couldn't find any of the tags ", injectCandidates, "from", filepath);
 				}
@@ -215,6 +215,7 @@ function entryPoint(staticHandler, file) {
  * @param file {string} Path to the entry point file
  * @param wait {number} Server will wait for all changes, before reloading
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
+ * @param middleware {array} Append middleware to stack, e.g. [function(req, res, next) { next(); }].
  */
 LiveServer.start = function(options) {
 	options = options || {};
@@ -236,10 +237,14 @@ LiveServer.start = function(options) {
 	var cors = options.cors || false;
 	var https = options.https || null;
 	var proxy = options.proxy || [];
+	var middleware = options.middleware || [];
 	LiveServer.markdownStyle = options.markdown;
 
 	// Setup a web server
 	var app = connect();
+
+	// Add middleware
+	middleware.map(app.use.bind(app));
 
 	// Use http-auth if configured
 	if (htpasswd !== null) {
@@ -267,6 +272,7 @@ LiveServer.start = function(options) {
 	proxy.forEach(function(proxyRule) {
 		var proxyOpts = url.parse(proxyRule[1]);
 		proxyOpts.via = true;
+		proxyOpts.preserveHost = true;
 		app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
 		if (LiveServer.logLevel >= 1)
 			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
