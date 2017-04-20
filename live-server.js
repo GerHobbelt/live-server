@@ -11,7 +11,8 @@ var opts = {
 	mount: [],
 	proxy: [],
 	logLevel: 2,
-	injection: ""
+	bodyInjection: "",
+	headInjection: "",
 };
 
 var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
@@ -128,8 +129,13 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		setTimeout(liveServer.shutdown, 500);
 		process.argv.splice(i, 1);
 	}	
-	else if (arg.indexOf("--injection=") > -1) {
-		opts.injection = arg.substring(12);
+	else if (arg.indexOf("--head-injection=") > -1) {
+		opts.headInjection = arg.substring(17);
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--body-injection=") > -1) {
+		opts.bodyInjection = arg.substring(17);
+		process.argv.splice(i, 1);
 	}
 }
 
