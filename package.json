@@ -28,7 +28,7 @@
     "proxy-middleware": "0.15.0",
     "send": "0.15.2",
     "serve-index": "1.8.0",
-    "stream-sink": "2.0.0",
+    "stream-sink": "GerHobbelt/node-stream-sink#master",
     "spdy": "3.4.4"
   },
   "devDependencies": {
