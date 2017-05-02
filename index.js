@@ -396,7 +396,7 @@ LiveServer.start = function (options) {
     if (typeof https === "string") {
       httpsConfig = require(path.resolve(process.cwd(), https));
     }
-    server = require("https").createServer(httpsConfig, app);
+		server = require("spdy").createServer(httpsConfig, app);
     protocol = "https";
   } else {
     server = http.createServer(app);
