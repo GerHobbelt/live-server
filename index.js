@@ -522,9 +522,11 @@ LiveServer.start = function (options) {
 	function handleChange(changePath) {
 		var cssChange = path.extname(changePath) === ".css";
 		if (LiveServer.logLevel >= 1) {
-			if (cssChange)
+			if (cssChange) {
 				console.log("CSS change detected".magenta, changePath);
-			else console.log("Change detected".cyan, changePath);
+      } else {
+        console.log("Change detected".cyan, changePath);
+      }
 		}
 		clients.forEach(function(ws) {
 			if (ws)

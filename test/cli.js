@@ -73,7 +73,7 @@ describe('command line usage', function() {
 	it('--config', function(done) {
 		exec_test([ "--config=test/data/.live-server.json", "--no-browser", "--test" ], function(error, stdout, stdin) {
 			assert(!error, error);
-			assert(stdout.indexOf("Serving") == 0, "serving string not found");
+			assert(stdout.indexOf("Serving \"") >= 0, "serving string not found");
 			assert(stdout.indexOf("at http://localhost:12345") != -1, "Failed to read config frm the configuration file!");
 			done();
 		});
@@ -86,7 +86,7 @@ describe('command line usage', function() {
 			"--no-browser", 
 			"--test" ], function(error, stdout, stdin) {
 			assert(!error, error);
-			assert(stdout.indexOf("Serving") == 0, "serving string not found");
+			assert(stdout.indexOf("Serving \"") >= 0, "serving string not found");
 			assert(stdout.indexOf("at http://127.0.0.1:54321") != -1, "Failed to read config frm the configuration file!");
 			done();
 		});

@@ -4,7 +4,7 @@ var fs = require('fs');
 var assign = require('object-assign');
 var liveServer = require("./index");
 
-var opts = {
+var defaultOpts = {
   host: process.env.IP,
   port: process.env.PORT,
   open: true,
@@ -15,31 +15,12 @@ var opts = {
 	logLevel: 2,
 };
 
-var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
-var configPath = path.join(homeDir, '.live-server.json');
-for (var i = process.argv.length - 1; i >= 2; --i) {
-	var arg = process.argv[i];
-	if (arg.indexOf("--config=") > -1) {
-		configPath = arg.substring(9);
-		process.argv.splice(i, 1);
-		break;
-	}
-}
-if (fs.existsSync(configPath)) {
-  var userConfig = fs.readFileSync(configPath, 'utf8');
-  assign(opts, JSON.parse(userConfig));
-  if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
-}
+var opts = {
+  // MUST be empty as we will merge any option set in here to `defaultOpts` 
+  // to produce the definitive `opts` collection for the server.
+};
 
-// Patch paths
-opts.root = process.argv[2] || process.cwd();
-
-var projectConfigPath = path.join(opts.root, '.live-server.json');
-if (fs.existsSync(projectConfigPath)) {
-	var projectConfig = fs.readFileSync(projectConfigPath, 'utf8');
-	assign(opts, JSON.parse(projectConfig));
-	if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
-}
+var configPath;
 
 for (var i = process.argv.length - 1; i >= 2; --i) {
   var arg = process.argv[i];
@@ -61,6 +42,7 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
       open = '/' + open;
     }
 		switch (typeof opts.open) {
+      case "undefined":
 			case "boolean":
 				opts.open = open;
 				break;
@@ -103,10 +85,12 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
     }
   }
   else if (arg === "--spa") {
+    if (!opts.middleware) opts.middleware = [];
 		opts.middleware.push("spa");
     process.argv.splice(i, 1);
   }
 	else if (arg === '--spa-ignore-assets') {
+    if (!opts.middleware) opts.middleware = [];
 		opts.middleware.push("spa-ignore-assets");
 		process.argv.splice(i, 1);
 	}
@@ -123,6 +107,7 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		// split only on the first ":", as the path may contain ":" as well (e.g. C:\file.txt)
 		var match = arg.substring(8).match(/([^:]+):(.+)$/);
 		match[2] = path.resolve(process.cwd(), match[2]);
+    if (!opts.mount) opts.mount = [];
 		opts.mount.push([ match[1], match[2] ]);
     process.argv.splice(i, 1);
   }
@@ -132,6 +117,9 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
     if (waitNumber === +waitString) {
       opts.wait = waitNumber;
       process.argv.splice(i, 1);
+    } else {
+      console.log('Invalid wait value (not a legal decimal numeric value): ', waitString);
+      process.exit();
     }
   }
   else if (arg === "--version" || arg === "-v") {
@@ -158,10 +146,12 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
   else if (arg.indexOf("--proxy=") > -1) {
     // split only on the first ":", as the URL will contain ":" as well
     var match = arg.substring(8).match(/([^:]+):(.+)$/);
+    if (!opts.proxy) opts.proxy = [];
     opts.proxy.push([ match[1], match[2] ]);
     process.argv.splice(i, 1);
   }
 	else if (arg.indexOf("--middleware=") > -1) {
+    if (!opts.middleware) opts.middleware = [];
 		opts.middleware.push(arg.substring(13));
 		process.argv.splice(i, 1);
 	}
@@ -184,8 +174,50 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
       process.exit();
     }
     process.argv.splice(i, 1);
+  } else if (arg.indexOf("--config=") > -1) {
+    configPath = arg.substring(9);
+    if (opts.logLevel) {
+      console.info("Command-line-argument-level config file specified at: ".cyan, configPath);
+    }
+    process.argv.splice(i, 1);
   }
 }
+
+// Patch paths
+opts.root = process.argv[2] || process.cwd();
+
+// When no config file has been specified, load a user-level or project-level one, iff available:
+if (!configPath) {
+  var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
+  if (homeDir) {
+    var userConfigPath = path.join(homeDir, '.live-server.json');
+    if (fs.existsSync(userConfigPath)) {
+      if (opts.logLevel) {
+        console.log("User-level config file detected at: ".cyan, userConfigPath);
+      }
+      configPath = userConfigPath;
+    }
+  }
+}
+if (!configPath) {
+  var projectConfigPath = path.join(opts.root, '.live-server.json');
+  if (fs.existsSync(projectConfigPath)) {
+    if (opts.logLevel) {
+      console.log("Project-level config file detected at: ".cyan, projectConfigPath);
+    }
+    configPath = projectConfigPath;
+  }
+}
+
+// Note: if `configPath` is set, it MUST exist (or trigger a fatal error)
+if (configPath) {
+  var configData = fs.readFileSync(configPath, 'utf8');
+  assign(defaultOpts, JSON.parse(configData));
+  if (defaultOpts.ignorePattern) defaultOpts.ignorePattern = new RegExp(defaultOpts.ignorePattern);
+}
+// Merge config file/default options and the ones obtained from the command line:
+assign(defaultOpts, opts);
+opts = defaultOpts;
 
 if (opts.watch) {
   opts.watch = opts.watch.map(function (relativePath) {
