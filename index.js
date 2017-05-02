@@ -128,11 +128,12 @@ function staticServer(root, spa) {
         stream.pipe = function (s) {
           originalPipe.call(stream, sink()).then(function (md) {
             var content = marked(md);
-            var html = fs.readFileSync(__dirname + '/markdown.html').toString();
+            var template_filepath = __dirname + '/markdown.html';
+            var html = fs.readFileSync(template_filepath).toString();
             html = html.replace('%content%', content);
             html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle]);
         
-            find_inject_tag(filepath, html);
+            find_inject_tag(template_filepath, html);
             if (injectTag) {
               html = html.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag);
             }
