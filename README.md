@@ -51,13 +51,14 @@ Command line parameters:
 * `--verbose | -V` - more logging (logs all requests, shows all listening IPv4 interfaces, etc.)
 * `--open=PATH` - launch browser to PATH instead of server root
 * `--watch=PATH` - comma-separated string of paths to exclusively watch for changes (default: watch everything)
-* `--ignore=PATH` - comma-separated string of paths to ignore
-* `--ignorePattern=RGXP` - Regular expression of files to ignore (ie `.*\.jade`)
+* `--ignore=PATH` - comma-separated string of paths to ignore ([anymatch](https://github.com/es128/anymatch)-compatible definition)
+* `--ignorePattern=RGXP` - Regular expression of files to ignore (ie `.*\.jade`) (**DEPRECATED** in favor of `--ignore`)
+* `--middleware=PATH` - path to .js file exporting a middleware function to add; can be a name without path nor extension to reference bundled middlewares in `middleware` folder
 * `--entry-file=PATH` - serve this file (server root relative) in place of missing files (useful for single page apps)
 * `--mount=ROUTE:PATH` - serve the paths contents under the defined route (multiple definitions possible)
 * `--spa` - translate requests from /abc to /#/abc (handy for Single Page Apps)
 * `--spa-ignore-assets` - when `--spa` is passed, this option stops the server intercepting requests for any assets (CSS, JS and so on)
-* `--wait=MILLISECONDS` - wait for all changes, before reloading
+* `--wait=MILLISECONDS` - (default 100ms) wait for all changes, before reloading
 * `--htpasswd=PATH` - Enables http-auth expecting htpasswd file located at PATH
 * `--cors` - Enables CORS for any origin (reflects request origin, requests with credentials are supported)
 * `--https=PATH` - PATH to a HTTPS configuration module
@@ -117,8 +118,12 @@ If using the node API, you can also directly pass a configuration object instead
 Troubleshooting
 ---------------
 
-Open your browser's console: there should be a message at the top stating that live reload is enabled. Note that you will need a browser that supports WebSockets. If there are errors, deal with them. If it's still not working, [file an issue](https://github.com/tapio/live-server/issues).
-
+* No reload on changes
+	* Open your browser's console: there should be a message at the top stating that live reload is enabled. Note that you will need a browser that supports WebSockets. If there are errors, deal with them. If it's still not working, [file an issue](https://github.com/tapio/live-server/issues).
+* Error: watch <PATH> ENOSPC
+	* See [this suggested solution](http://stackoverflow.com/questions/22475849/node-js-error-enospc/32600959#32600959).
+* Reload works but changes are missing or outdated
+	* Try using `--wait=MS` option. Where `MS` is time in milliseconds to wait before issuing a reload.
 
 How it works
 ------------
@@ -136,9 +141,16 @@ Version history
 ---------------
 
 * master (unreleased)
+	- Add `--middleware` parameter to use external middlewares
+	- `middleware` API parameter now also accepts strings similar to `--middleware`
+	- Changed file watcher to improve speed (@pavel)
+	- `--ignore` now accepts regexps and globs, `--ignorePattern` deprecated (@pavel)
 	- Added `--verbose` cli option (logLevel 3) (@pavel)
 		- Logs all requests, displays warning when can't inject html file, displays all listening IPv4 interfaces...
 	- HTTPS configuration now also accepts a plain object (@pavel)
+	- Move `--spa` to a bundled middleware file
+	- New bundled `spa-no-assets` middleware that works like `spa` but ignores requests with extension
+	- Allow multiple `--open` arguments (@PirtleShell)
 * v1.1.0
 	- Proxy support (@pavel)
 	- Middleware support (@achandrasekar)

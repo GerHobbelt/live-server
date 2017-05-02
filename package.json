@@ -12,6 +12,7 @@
   ],
   "author": "Tapio Vierros",
   "dependencies": {
+    "chokidar": "1.6.0",
     "colors": "latest",
     "connect": "3.6.1",
     "cors": "latest",
@@ -26,9 +27,7 @@
     "opn": "latest",
     "proxy-middleware": "latest",
     "send": "latest",
-    "serve-index": "1.8.0",
-    "stream-sink": "2.0.0",
-    "watchr": "2.6.0"
+    "serve-index": "1.7.2"
   },
   "devDependencies": {
     "mocha": "3.3.0",

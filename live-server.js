@@ -11,7 +11,8 @@ var opts = {
   markdown: 'html',
   mount: [],
   proxy: [],
-  logLevel: 2
+	middleware: [],
+	logLevel: 2,
 };
 
 var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
@@ -41,7 +42,17 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
     if (open.indexOf('/') !== 0) {
       open = '/' + open;
     }
-    opts.open = open;
+		switch (typeof opts.open) {
+			case "boolean":
+				opts.open = open;
+				break;
+			case "string":
+				opts.open = [opts.open, open];
+				break;
+			case "object":
+				opts.open.push(open);
+				break;
+		}
     process.argv.splice(i, 1);
   }
   else if (arg.indexOf("--watch=") > -1) {
@@ -74,11 +85,11 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
     }
   }
   else if (arg === "--spa") {
-    opts.spa = true;
+		opts.middleware.push("spa");
     process.argv.splice(i, 1);
   }
 	else if (arg === '--spa-ignore-assets') {
-		opts.spaIgnoreAssets = true;
+		opts.middleware.push("spa-ignore-assets");
 		process.argv.splice(i, 1);
 	}
   else if (arg === "--quiet" || arg === "-q") {
@@ -128,6 +139,10 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
     opts.proxy.push([ match[1], match[2] ]);
     process.argv.splice(i, 1);
   }
+	else if (arg.indexOf("--middleware=") > -1) {
+		opts.middleware.push(arg.substring(13));
+		process.argv.splice(i, 1);
+	}
   else if (arg === "--help" || arg === "-h") {
     console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [-V|--verbose] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--entry-file=PATH] [--spa] [--spa-ignore-assets] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https=PATH] [--proxy=PATH] [PATH]');
     process.exit();

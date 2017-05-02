@@ -14,7 +14,7 @@ var fs = require('fs'),
   marked = require('marked'),
   es = require("event-stream"),
 	os = require('os'),
-  watchr = require('watchr'),
+	chokidar = require('chokidar'),
   mkdirp = require('mkdirp');
 require('colors');
 
@@ -22,7 +22,7 @@ var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8
 
 var LiveServer = {
   server: null,
-  watchers: [],
+	watcher: null,
   logLevel: 2
 };
 
@@ -42,7 +42,7 @@ function escape(html){
 }
 
 // Based on connect.static(), but streamlined and with added code injector
-function staticServer(root, options) {
+function staticServer(root) {
   var isFile = false;
   try { // For supporting mounting files instead of just directories
     isFile = fs.statSync(root).isFile();
@@ -56,21 +56,6 @@ function staticServer(root, options) {
     var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>") ];
     var injectTag = null;
     var injectMarkdown = false;
-
-    // Single Page App - redirect handler
-    if (options.spa && req.url !== '/') {
-			var ext = path.extname(req.url);
-			var shouldRewriteRequest = (options.spaIgnoreAssets === true && ext === '') ||
-				(typeof options.spaIgnoreAssets === 'function' &&
-					options.spaIgnoreAssets(req) === false);
-
-			if (shouldRewriteRequest) {
-				var route = req.url;
-				req.url = '/';
-				res.statusCode = 302;
-				res.setHeader('Location', req.url + '#' + route);
-			}
-    }
 
     function directory() {
       var pathname = url.parse(req.originalUrl).pathname;
@@ -306,15 +291,13 @@ function entryPoint(staticHandler, file) {
  * @param watch {array} Paths to exclusively watch for changes
  * @param ignore {array} Paths to ignore when watching files for changes
  * @param ignorePattern {regexp} Ignore files by RegExp
- * @param open {string} Subpath to open in browser, use false to suppress launch (default: server root)
+ * @param open {(string|string[])} Subpath(s) to open in browser, use false to suppress launch (default: server root)
  * @param mount {array} Mount directories onto a route, e.g. [['/components', './node_modules']].
  * @param logLevel {number} 0 = errors only, 1 = some, 2 = lots
  * @param file {string} Path to the entry point file
  * @param wait {number} Server will wait for all changes, before reloading
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
  * @param middleware {array} Append middleware to stack, e.g. [function (req, res, next) { next(); }].
- * @param spa {boolean} Translate requests from `/abc` to `/#/abc` (handy for Single Page Apps)
- * @param spaIgnoreAssets {boolean|function} when the `.spa` option is turned on, this option stops the server intercepting requests for any assets (CSS, JS and so on)
  * @param cors {boolean} Enables CORS for any origin (reflects request origin, requests with credentials are supported)
  * @param https {string} PATH to a HTTPS configuration module
  * @param proxy {string} Proxy all requests for ROUTE to URL (string format: "ROUTE:URL") 
@@ -330,12 +313,10 @@ LiveServer.start = function (options) {
   LiveServer.logLevel = options.logLevel === undefined ? 2 : options.logLevel;
   var openPath = (options.open === undefined || options.open === true) ?
     "" : ((options.open === null || options.open === false) ? null : options.open);
-  //var spa = options.spa || false;
-	//var spaIgnoreAssets = options.spaIgnoreAssets || false;
   if (options.noBrowser) openPath = null; // Backwards compatibility with 0.7.0
   var file = options.file;
-	var staticServerHandler = staticServer(root, options);
-  var wait = options.wait || 0;
+	var staticServerHandler = staticServer(root);
+	var wait = options.wait === undefined ? 100 : options.wait;
   var browser = options.browser || null;
   var htpasswd = options.htpasswd || null;
   var cors = options.cors || false;
@@ -357,7 +338,17 @@ LiveServer.start = function (options) {
     app.use(logger('dev'));
   }
   // Add middleware
-  middleware.map(app.use.bind(app));
+	middleware.map(function(mw) {
+		if (typeof mw === "string") {
+			var ext = path.extname(mw).toLocaleLowerCase();
+			if (ext !== ".js") {
+				mw = require(path.join(__dirname, "middleware", mw + ".js"));
+			} else {
+				mw = require(mw);
+			}
+		}
+		app.use(mw);
+	});
 
   // Use http-auth if configured
   if (htpasswd !== null) {
@@ -467,7 +458,13 @@ LiveServer.start = function (options) {
 
     // Launch browser
     if (openPath !== null)
-      open(openURL + openPath, {app: browser});
+			if (typeof openPath === "object") {
+				openPath.forEach(function(p) {
+					open(openURL + p, {app: browser});
+				});
+			} else {
+				open(openURL + openPath, {app: browser});
+			}
   });
 
   // Setup server to listen at port
@@ -503,49 +500,57 @@ LiveServer.start = function (options) {
     clients.push(ws);
   });
 
+	var ignored = [
+		function(testPath) { // Always ignore dotfiles (important e.g. because editor hidden temp files)
+			return /(^[.#]|(?:__|~)$)/.test(path.basename(testPath));
+		}
+	];
+	if (options.ignore) {
+		ignored = ignored.concat(options.ignore);
+	}
+	if (options.ignorePattern) {
+		ignored.push(options.ignorePattern);
+	}
   // Setup file watcher
-  watchr.watch({
-    paths: watchPaths,
-    ignorePaths: options.ignore || false,
-    ignoreCommonPatterns: true,
-    ignoreHiddenFiles: true,
-    ignoreCustomPatterns: options.ignorePattern || null,
-    preferredMethods: [ 'watchFile', 'watch' ],
-    interval: 1407,
-    listeners: {
-      error: function (err) {
-        console.log("ERROR:".red, err);
-      },
-      change: function (eventName, filePath /*, fileCurrentStat, filePreviousStat*/) {
-        clients.forEach(function (ws) {
-          if (!ws) return;
-          if (path.extname(filePath) === ".css") {
-            ws.send('refreshcss');
-            if (LiveServer.logLevel >= 1)
-              console.log("CSS change detected".magenta, filePath);
-          } else {
-            ws.send('reload');
-            if (LiveServer.logLevel >= 1)
-              console.log("File change detected".cyan, filePath);
-          }
-        });
-      }
-    },
-    next: function (err, watchers) {
-      if (err)
-        console.error("Error watching files:".red, err);
-      LiveServer.watchers = watchers;
-    }
-  });
+	LiveServer.watcher = chokidar.watch(watchPaths, {
+		ignored: ignored,
+		ignoreInitial: true
+	});
+	function handleChange(changePath) {
+		clients.forEach(function (ws) {
+			if (!ws) return;
+			if (path.extname(changePath) === ".css") {
+				ws.send('refreshcss');
+				if (LiveServer.logLevel >= 1)
+					console.log("CSS change detected".magenta, changePath);
+			} else {
+				ws.send('reload');
+				if (LiveServer.logLevel >= 1)
+					console.log("Change detected".cyan, changePath);
+			}
+		});
+	}
+	LiveServer.watcher
+		.on("change", handleChange)
+		.on("add", handleChange)
+		.on("unlink", handleChange)
+		.on("addDir", handleChange)
+		.on("unlinkDir", handleChange)
+		.on("ready", function () {
+			if (LiveServer.logLevel >= 1)
+				console.log("Ready for changes".cyan);
+		})
+		.on("error", function (err) {
+			console.log("ERROR:".red, err);
+		});
 
   return server;
 };
 
 LiveServer.shutdown = function () {
-  var watchers = LiveServer.watchers;
-  if (watchers) {
-    for (var i = 0; i < watchers.length; ++i)
-      watchers[i].close();
+	var watcher = LiveServer.watcher;
+	if (watcher) {
+		watcher.close();
   }
   var server = LiveServer.server;
   if (server)
