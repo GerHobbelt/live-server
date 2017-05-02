@@ -63,6 +63,7 @@ Command line parameters:
 * `--cors` - Enables CORS for any origin (reflects request origin, requests with credentials are supported)
 * `--https=PATH` - PATH to a HTTPS configuration module; if no PATH is specified, a generic (expired) certification is used
 * `--proxy=ROUTE:URL` - proxy all requests for ROUTE to URL
+* `--no-css-inject` - reload page on CSS change, rather than injecting changed CSS
 * `--config=FILE` - specify a JSON configuration file to be used. Inline arguments take precedence.
 * `--help | -h` - display terse usage hint and exit
 * `--version | -v` - display version and exit
