@@ -53,7 +53,7 @@ function staticServer(root) {
     if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
     var reqpath = isFile ? "" : url.parse(req.url).pathname;
     var hasNoOrigin = !req.headers.origin;
-    var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>") ];
+		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>"), new RegExp("</head>", "i")];
     var injectTag = null;
     var injectMarkdown = false;
 
@@ -431,7 +431,7 @@ LiveServer.start = function (options) {
 					return ifaces[iface];
 				})
 				// flatten address data, use only IPv4
-				.reduce(function (data, addresses) {
+				.reduce(function(data, addresses) {
 					addresses.filter(function(addr) {
 						return addr.family === "IPv4";
 					}).forEach(function(addr) {
@@ -502,7 +502,7 @@ LiveServer.start = function (options) {
 
 	var ignored = [
 		function(testPath) { // Always ignore dotfiles (important e.g. because editor hidden temp files)
-			return /(^[.#]|(?:__|~)$)/.test(path.basename(testPath));
+			return testPath !== "." && /(^[.#]|(?:__|~)$)/.test(path.basename(testPath));
 		}
 	];
 	if (options.ignore) {
@@ -517,17 +517,15 @@ LiveServer.start = function (options) {
 		ignoreInitial: true
 	});
 	function handleChange(changePath) {
-		clients.forEach(function (ws) {
-			if (!ws) return;
-			if (path.extname(changePath) === ".css") {
-				ws.send('refreshcss');
-				if (LiveServer.logLevel >= 1)
-					console.log("CSS change detected".magenta, changePath);
-			} else {
-				ws.send('reload');
-				if (LiveServer.logLevel >= 1)
-					console.log("Change detected".cyan, changePath);
-			}
+		var cssChange = path.extname(changePath) === ".css";
+		if (LiveServer.logLevel >= 1) {
+			if (cssChange)
+				console.log("CSS change detected".magenta, changePath);
+			else console.log("Change detected".cyan, changePath);
+		}
+		clients.forEach(function(ws) {
+			if (ws)
+				ws.send(cssChange ? 'refreshcss' : 'reload');
 		});
 	}
 	LiveServer.watcher

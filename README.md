@@ -140,7 +140,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 Version history
 ---------------
 
-* master (unreleased)
+* v1.2.0
 	- Add `--middleware` parameter to use external middlewares
 	- `middleware` API parameter now also accepts strings similar to `--middleware`
 	- Changed file watcher to improve speed (@pavel)
@@ -151,6 +151,8 @@ Version history
 	- Move `--spa` to a bundled middleware file
 	- New bundled `spa-no-assets` middleware that works like `spa` but ignores requests with extension
 	- Allow multiple `--open` arguments (@PirtleShell)
+	- Inject to `head` if `body` not found (@pmd1991)
+	- Update dependencies
 * v1.1.0
 	- Proxy support (@pavel)
 	- Middleware support (@achandrasekar)
