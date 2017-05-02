@@ -27,7 +27,8 @@
     "opn": "latest",
     "proxy-middleware": "latest",
     "send": "latest",
-    "serve-index": "1.8.0"
+    "serve-index": "1.8.0",
+    "stream-sink": "2.0.0"
   },
   "devDependencies": {
     "mocha": "3.3.0",
@@ -38,7 +39,7 @@
   "scripts": {
     "lint": "eslint live-server.js index.js",
     "hint": "jshint live-server.js index.js",
-    "test": "mocha test && npm run lint"
+    "test": "mocha test && npm run lint && npm run hint"
   },
   "bin": {
     "live-server": "./live-server.js"
