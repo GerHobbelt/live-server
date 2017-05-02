@@ -90,7 +90,7 @@ function staticServer(root, spa) {
     }
 
     function file(filepath /*, stat*/) {
-      var x = path.extname(filepath).toLocaleLowerCase(), match,
+      var x = path.extname(filepath).toLocaleLowerCase(),
           possibleExtensions = [ "", ".html", ".htm", ".xhtml", ".php", ".svg" ];
       if (hasNoOrigin && (possibleExtensions.indexOf(x) > -1)) {
         // TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
@@ -264,7 +264,7 @@ function staticServer(root, spa) {
           res.removeHeader('Content-Length');
           res.write('received upload:\n\n' + filelst4response.length + ' files:\n\n' + filelst4response.join('\n') + '\n\n' + JSON.stringify(fileResults));
           res.end();
-        };
+        }
       });
     } else {
       send(req, reqpath, { root: root })
