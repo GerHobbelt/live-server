@@ -42,7 +42,7 @@ function escape(html){
 }
 
 // Based on connect.static(), but streamlined and with added code injector
-function staticServer(root, spa, spaIgnoreAssets) {
+function staticServer(root, options) {
   var isFile = false;
   try { // For supporting mounting files instead of just directories
     isFile = fs.statSync(root).isFile();
@@ -58,11 +58,11 @@ function staticServer(root, spa, spaIgnoreAssets) {
     var injectMarkdown = false;
 
     // Single Page App - redirect handler
-    if (spa && req.url !== '/') {
+    if (options.spa && req.url !== '/') {
 			var ext = path.extname(req.url);
-			var shouldRewriteRequest = (spaIgnoreAssets === true && ext === '') ||
-				(typeof spaIgnoreAssets === 'function' &&
-					spaIgnoreAssets(req) === false);
+			var shouldRewriteRequest = (options.spaIgnoreAssets === true && ext === '') ||
+				(typeof options.spaIgnoreAssets === 'function' &&
+					options.spaIgnoreAssets(req) === false);
 
 			if (shouldRewriteRequest) {
 				var route = req.url;
@@ -313,6 +313,12 @@ function entryPoint(staticHandler, file) {
  * @param wait {number} Server will wait for all changes, before reloading
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
  * @param middleware {array} Append middleware to stack, e.g. [function (req, res, next) { next(); }].
+ * @param spa {boolean} Translate requests from `/abc` to `/#/abc` (handy for Single Page Apps)
+ * @param spaIgnoreAssets {boolean|function} when the `.spa` option is turned on, this option stops the server intercepting requests for any assets (CSS, JS and so on)
+ * @param cors {boolean} Enables CORS for any origin (reflects request origin, requests with credentials are supported)
+ * @param https {string} PATH to a HTTPS configuration module
+ * @param proxy {string} Proxy all requests for ROUTE to URL (string format: "ROUTE:URL") 
+ * @param markdown {string} When non-NULL, render markdown files to HTML using the given style
  */
 LiveServer.start = function (options) {
   options = options || {};
@@ -324,11 +330,11 @@ LiveServer.start = function (options) {
   LiveServer.logLevel = options.logLevel === undefined ? 2 : options.logLevel;
   var openPath = (options.open === undefined || options.open === true) ?
     "" : ((options.open === null || options.open === false) ? null : options.open);
-  var spa = options.spa || false;
-	var spaIgnoreAssets = options.spaIgnoreAssets || false;
+  //var spa = options.spa || false;
+	//var spaIgnoreAssets = options.spaIgnoreAssets || false;
   if (options.noBrowser) openPath = null; // Backwards compatibility with 0.7.0
   var file = options.file;
-	var staticServerHandler = staticServer(root, spa, spaIgnoreAssets);
+	var staticServerHandler = staticServer(root, options);
   var wait = options.wait || 0;
   var browser = options.browser || null;
   var htpasswd = options.htpasswd || null;
@@ -372,7 +378,7 @@ LiveServer.start = function (options) {
     var mountPath = path.resolve(process.cwd(), mountRule[1]);
     if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
       watchPaths.push(mountPath);
-    app.use(mountRule[0], staticServer(mountPath));
+    app.use(mountRule[0], staticServer(mountPath, options));
     if (LiveServer.logLevel >= 1)
       console.log('Mapping %s to "%s"', mountRule[0], mountPath);
   });
