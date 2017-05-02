@@ -376,7 +376,7 @@ LiveServer.start = function (options) {
   }
   mount.forEach(function (mountRule) {
     var mountPath = path.resolve(process.cwd(), mountRule[1]);
-    if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
+    if (!options.watch) // Auto add mount paths to watching but only if exclusive path option is not given
       watchPaths.push(mountPath);
     app.use(mountRule[0], staticServer(mountPath, options));
     if (LiveServer.logLevel >= 1)
