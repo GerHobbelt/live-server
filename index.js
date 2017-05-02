@@ -116,8 +116,8 @@ function staticServer(root, spa) {
 
         res.setHeader('Content-Length', len);
         originalPipe = stream.pipe;
-        stream.pipe = function (s) {
-          originalPipe.call(stream, es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag)).pipe(s);
+				stream.pipe = function(resp) {
+					originalPipe.call(stream, es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag)).pipe(resp);
         };
       }
       if (injectMarkdown) {
