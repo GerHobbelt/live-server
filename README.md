@@ -61,7 +61,7 @@ Command line parameters:
 * `--wait=MILLISECONDS` - (default 100ms) wait for all changes, before reloading
 * `--htpasswd=PATH` - Enables http-auth expecting htpasswd file located at PATH
 * `--cors` - Enables CORS for any origin (reflects request origin, requests with credentials are supported)
-* `--https=PATH` - PATH to a HTTPS configuration module; if no PATH is specified, a generic (expired) certification is used
+* `--https[=PATH]` - PATH to a HTTPS configuration module; if no PATH is specified, a generic (expired) certification is used
 * `--proxy=ROUTE:URL` - proxy all requests for ROUTE to URL
 * `--no-css-inject` - reload page on CSS change, rather than injecting changed CSS
 * `--config=FILE` - specify a JSON configuration file to be used. Inline arguments take precedence.

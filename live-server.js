@@ -110,6 +110,10 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
     // e.g. "--mount=/components:./node_modules" will be ['/components', '<process.cwd()>/node_modules']
 		// split only on the first ":", as the path may contain ":" as well (e.g. C:\file.txt)
 		var match = arg.substring(8).match(/([^:]+):(.+)$/);
+    if (!match) {
+      console.log("Invalid mount point / route specified: the route must be non-empty, the path must be non-empty as well.");
+      process.exit();
+    }
 		match[2] = path.resolve(process.cwd(), match[2]);
     if (!opts.mount) opts.mount = [];
 		opts.mount.push([ match[1], match[2] ]);
