@@ -292,11 +292,13 @@ function entryPoint(staticHandler, file) {
  * @param ignore {array} Paths to ignore when watching files for changes
  * @param ignorePattern {regexp} Ignore files by RegExp
  * @param noCssInject Don't inject CSS changes, just reload as with any other file change
+ * @param noBrowser {boolean} Suppress automatic web browser launching
+ * @param browser {string} Specify browser to use instead of system default
  * @param open {(string|string[])} Subpath(s) to open in browser, use false to suppress launch (default: server root)
  * @param mount {array} Mount directories onto a route, e.g. [['/components', './node_modules']].
  * @param logLevel {number} 0 = errors only, 1 = some, 2 = lots
  * @param file {string} Path to the entry point file
- * @param wait {number} Server will wait for all changes, before reloading
+ * @param wait {number} Server will wait the specified number of milliseconds for all changes, before reloading
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
  * @param middleware {array} Append middleware to stack, e.g. [function (req, res, next) { next(); }].
  * @param cors {boolean} Enables CORS for any origin (reflects request origin, requests with credentials are supported)
