@@ -13,6 +13,7 @@ var fs = require('fs'),
   sink = require('stream-sink'),
   marked = require('marked'),
   es = require("event-stream"),
+	os = require('os'),
   watchr = require('watchr'),
   mkdirp = require('mkdirp');
 require('colors');
@@ -417,10 +418,35 @@ LiveServer.start = function (options) {
     var serveURL = protocol + '://' + serveHost + ':' + address.port;
     var openURL = protocol + '://' + openHost + ':' + address.port;
 
+		var serveURLs = [ serveURL ];
+		if (LiveServer.logLevel > 2 && address.address === "0.0.0.0") {
+			var ifaces = os.networkInterfaces();
+			serveURLs = Object.keys(ifaces)
+				.map(function(iface) {
+					return ifaces[iface];
+				})
+				// flatten address data, use only IPv4
+				.reduce(function (data, addresses) {
+					addresses.filter(function(addr) {
+						return addr.family === "IPv4";
+					}).forEach(function(addr) {
+						data.push(addr);
+					});
+					return data;
+				}, [])
+				.map(function(addr) {
+					return protocol + "://" + addr.address + ":" + address.port;
+				});
+		}
+
     // Output
     if (LiveServer.logLevel >= 1) {
       if (serveURL === openURL)
-        console.log(("Serving \"%s\" at %s").green, root, serveURL);
+				if (serveURLs.length === 1) {
+					console.log(("Serving \"%s\" at %s").green, root, serveURLs[0]);
+				} else {
+					console.log(("Serving \"%s\" at\n\t%s").green, root, serveURLs.join("\n\t"));
+				}
       else
         console.log(("Serving \"%s\" at %s (%s)").green, root, openURL, serveURL);
     }
