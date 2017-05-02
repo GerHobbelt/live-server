@@ -63,6 +63,7 @@ Command line parameters:
 * `--cors` - Enables CORS for any origin (reflects request origin, requests with credentials are supported)
 * `--https=PATH` - PATH to a HTTPS configuration module; if no PATH is specified, a generic (expired) certification is used
 * `--proxy=ROUTE:URL` - proxy all requests for ROUTE to URL
+* `--config=FILE` - specify a JSON configuration file to be used. Inline arguments take precedence.
 * `--help | -h` - display terse usage hint and exit
 * `--version | -v` - display version and exit
 * `--no-markdown` - do not render markdown files as such
@@ -141,6 +142,8 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 Version history
 ---------------
 
+* v1.3.0
+	- Add `--config` parameter to support specifying configuration files
 * v1.2.0
 	- Add `--middleware` parameter to use external middlewares
 	- `middleware` API parameter now also accepts strings similar to `--middleware`
