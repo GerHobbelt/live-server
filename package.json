@@ -1,6 +1,6 @@
 {
-  "name": "@GerHobbelt/live-server",
-  "version": "1.3.0-18",
+  "name": "live-server",
+  "version": "1.3.0-19",
   "description": "simple development http server with live reload capability",
   "keywords": [
     "front-end",
@@ -40,7 +40,8 @@
   "scripts": {
     "lint": "eslint live-server.js index.js",
     "hint": "jshint live-server.js index.js",
-    "test": "mocha test && npm run lint && npm run hint"
+    "test": "mocha test --timeout 5000 && npm run lint && npm run hint",
+    "clear": "rm -f package-lock.json ; rm -rf node_modules"
   },
   "bin": {
     "live-server": "./live-server.js"
