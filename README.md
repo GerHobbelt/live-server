@@ -62,6 +62,7 @@ Command line parameters:
 * `--htpasswd=PATH` - Enables http-auth expecting htpasswd file located at PATH
 * `--cors` - Enables CORS for any origin (reflects request origin, requests with credentials are supported)
 * `--https[=PATH]` - PATH to a HTTPS configuration module; if no PATH is specified, a generic (expired) certification is used
+* `--https-module=MODULE_NAME` - Custom HTTPS module (e.g. `spdy`)
 * `--proxy=ROUTE:URL` - proxy all requests for ROUTE to URL
 * `--no-css-inject` - reload page on CSS change, rather than injecting changed CSS
 * `--config=FILE` - specify a JSON configuration file to be used. Inline arguments take precedence.
@@ -117,6 +118,18 @@ module.exports = {
 
 If using the node API, you can also directly pass a configuration object instead of a path to the module.
 
+HTTP/2
+---------------
+
+To get HTTP/2 support one can provide a custom HTTPS module via `--https-module` CLI parameter (`httpsModule` option for Node.js script). **Be sure to install the module first.**
+HTTP/2 unencrypted mode is not supported by browsers, thus not supported by `live-server`. See [this question](https://http2.github.io/faq/#does-http2-require-encryption) and [can I use page on HTTP/2](http://caniuse.com/#search=http2) for more details.
+
+For example from CLI(bash):
+
+	live-server \
+		--https=path/to/https.conf.js \
+		--https-module=spdy \
+		my-app-folder/
 
 Troubleshooting
 ---------------
@@ -137,7 +150,7 @@ The server is a simple node app that serves the working directory and its subdir
 Contributing
 ------------
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+We welcome contributions! See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for details.
 
 
 Version history

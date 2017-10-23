@@ -147,6 +147,10 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
     opts.https = arg.substring(8);
     process.argv.splice(i, 1);
   }
+	else if (arg.indexOf("--https-module=") > -1) {
+		opts.httpsModule = arg.substring(15);
+		process.argv.splice(i, 1);
+	}
 	else if (arg.indexOf("--https") > -1) {
 		opts.https = path.join(__dirname, 'test/conf/https.conf.js');
 		process.argv.splice(i, 1);
@@ -164,7 +168,7 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		process.argv.splice(i, 1);
 	}
   else if (arg === "--help" || arg === "-h") {
-    console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [-V|--verbose] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--no-css-inject] [--entry-file=PATH] [--spa] [--spa-ignore-assets] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https[=PATH]] [--proxy=PATH] [--config=FILE] [PATH]');
+    console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [-V|--verbose] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--no-css-inject] [--entry-file=PATH] [--spa] [--spa-ignore-assets] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https[=PATH]] [--https-module=MODULE_NAME] [--proxy=PATH] [--config=FILE] [PATH]');
     process.exit();
   }
   else if (arg === "--test") {

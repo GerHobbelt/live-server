@@ -327,7 +327,21 @@ LiveServer.start = function (options) {
   var proxy = options.proxy || [];
   var middleware = options.middleware || [];
 	var noCssInject = options.noCssInject;
+	var httpsModule = options.httpsModule;
+
   LiveServer.markdownStyle = options.markdown;
+
+	if (httpsModule) {
+		try {
+			require.resolve(httpsModule);
+		} catch (e) {
+			console.error(("HTTPS module \"" + httpsModule + "\" you've provided was not found.").red);
+			console.error("Did you do", "\"npm install " + httpsModule + "\"?");
+			return;
+		}
+	} else {
+		httpsModule = "https";
+	}
 
   // Setup a web server
   var app = connect();
@@ -357,78 +371,78 @@ LiveServer.start = function (options) {
 		app.use(mw);
 	});
 
-  // Use http-auth if configured
-  if (htpasswd !== null) {
-    var auth = require('http-auth');
-    var basic = auth.basic({
-      realm: "Please authorize",
-      file: htpasswd
-    });
-    app.use(auth.connect(basic));
-  }
-  if (cors) {
-    app.use(require("cors")({
-      origin: true, // reflecting request origin
-      credentials: true // allowing requests with credentials
-    }));
-  }
-  mount.forEach(function (mountRule) {
-    var mountPath = path.resolve(process.cwd(), mountRule[1]);
-    if (!options.watch) // Auto add mount paths to watching but only if exclusive path option is not given
-      watchPaths.push(mountPath);
-    app.use(mountRule[0], staticServer(mountPath));
-    if (LiveServer.logLevel >= 1)
-      console.log('Mapping %s to "%s"', mountRule[0], mountPath);
-  });
-  proxy.forEach(function (proxyRule) {
-    var proxyOpts = url.parse(proxyRule[1]);
-    proxyOpts.via = true;
-    proxyOpts.preserveHost = true;
-    app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
-    if (LiveServer.logLevel >= 1)
-      console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
-  });
-  app.use(staticServerHandler) // Custom static server
-    .use(entryPoint(staticServerHandler, file))
-    .use(serveIndex(root, { icons: true }));
+	// Use http-auth if configured
+	if (htpasswd !== null) {
+		var auth = require('http-auth');
+		var basic = auth.basic({
+			realm: "Please authorize",
+			file: htpasswd
+		});
+		app.use(auth.connect(basic));
+	}
+	if (cors) {
+		app.use(require("cors")({
+			origin: true, // reflecting request origin
+			credentials: true // allowing requests with credentials
+		}));
+	}
+	mount.forEach(function(mountRule) {
+		var mountPath = path.resolve(process.cwd(), mountRule[1]);
+		if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
+			watchPaths.push(mountPath);
+		app.use(mountRule[0], staticServer(mountPath));
+		if (LiveServer.logLevel >= 1)
+			console.log('Mapping %s to "%s"', mountRule[0], mountPath);
+	});
+	proxy.forEach(function(proxyRule) {
+		var proxyOpts = url.parse(proxyRule[1]);
+		proxyOpts.via = true;
+		proxyOpts.preserveHost = true;
+		app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
+		if (LiveServer.logLevel >= 1)
+			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
+	});
+	app.use(staticServerHandler) // Custom static server
+		.use(entryPoint(staticServerHandler, file))
+		.use(serveIndex(root, { icons: true }));
 
-  var server, protocol;
-  if (https !== null) {
-    var httpsConfig = https;
-    if (typeof https === "string") {
-      httpsConfig = require(path.resolve(process.cwd(), https));
-    }
-		server = require("spdy").createServer(httpsConfig, app);
-    protocol = "https";
-  } else {
-    server = http.createServer(app);
-    protocol = "http";
-  }
+	var server, protocol;
+	if (https !== null) {
+		var httpsConfig = https;
+		if (typeof https === "string") {
+			httpsConfig = require(path.resolve(process.cwd(), https));
+		}
+		server = require(httpsModule).createServer(httpsConfig, app);
+		protocol = "https";
+	} else {
+		server = http.createServer(app);
+		protocol = "http";
+	}
 
-  // Handle server startup errors
-  server.addListener('error', function (e) {
-    if (e.code === 'EADDRINUSE') {
-      var serveURL = protocol + '://' + host + ':' + port;
-      console.log('%s is already in use. Trying another port.'.yellow, serveURL);
-      setTimeout(function () {
-        server.listen(0, host);
-      }, 1000);
-    } else {
-      console.error(e.toString().red);
-      LiveServer.shutdown();
-    }
-  });
+	// Handle server startup errors
+	server.addListener('error', function(e) {
+		if (e.code === 'EADDRINUSE') {
+			var serveURL = protocol + '://' + host + ':' + port;
+			console.log('%s is already in use. Trying another port.'.yellow, serveURL);
+			setTimeout(function() {
+				server.listen(0, host);
+			}, 1000);
+		} else {
+			console.error(e.toString().red);
+			LiveServer.shutdown();
+		}
+	});
 
-  // Handle successful server
-  server.addListener('listening', function (/*e*/) {
-    LiveServer.server = server;
+	// Handle successful server
+	server.addListener('listening', function(/*e*/) {
+		LiveServer.server = server;
 
-    var address = server.address();
-    var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : address.address;
-    var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+		var address = server.address();
+		var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : address.address;
+		var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
 
-    var serveURL = protocol + '://' + serveHost + ':' + address.port;
-    var openURL = protocol + '://' + openHost + ':' + address.port;
+		var serveURL = protocol + '://' + serveHost + ':' + address.port;
+		var openURL = protocol + '://' + openHost + ':' + address.port;
 
 		var serveURLs = [ serveURL ];
 		if (LiveServer.logLevel > 2 && address.address === "0.0.0.0") {
