@@ -19,6 +19,7 @@
     "event-stream": "latest",
     "faye-websocket": "0.11.x",
     "http-auth": "3.1.x",
+    "jsonminify": "latest",
     "morgan": "^1.6.1",
     "object-assign": "latest",
     "opn": "latest",

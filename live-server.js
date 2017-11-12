@@ -3,6 +3,7 @@ var path = require('path');
 var fs = require('fs');
 var assign = require('object-assign');
 var liveServer = require("./index");
+var jsonminify = require("jsonminify");
 
 var opts = {
 	host: process.env.IP,
@@ -18,7 +19,7 @@ var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME
 var configPath = path.join(homeDir, '.live-server.json');
 if (fs.existsSync(configPath)) {
 	var userConfig = fs.readFileSync(configPath, 'utf8');
-	assign(opts, JSON.parse(userConfig));
+	assign(opts, JSON.parse(jsonminify(userConfig)));
 	if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
 }
 
