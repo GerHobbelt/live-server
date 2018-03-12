@@ -103,15 +103,15 @@ function staticServer(root, spa, headInjection, bodyInjection) {
 
 
 			if (injectTag) {
-				len += INJECTED_RELOAD_CODE.length;
+				len += Buffer.byteLength(INJECTED_RELOAD_CODE, 'utf8');
 				doInject = true;
 			}
 			if (injectBody) {
-				len += bodyInjection.length;
+				len += Buffer.byteLength(bodyInjection, 'utf8');
 				doInject = true;
 			}
 			if (injectHead) {
-				len += headInjection.length;
+				len += Buffer.byteLength(headInjection, 'utf8');
 				doInject = true;
 			}
 
