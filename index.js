@@ -18,7 +18,7 @@ var fs = require('fs'),
   mkdirp = require('mkdirp');
 require('colors');
 
-var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
+var INJECTED_RELOAD_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
 
 var LiveServer = {
   server: null,
@@ -42,7 +42,7 @@ function escape(html){
 }
 
 // Based on connect.static(), but streamlined and with added code injector
-function staticServer(root) {
+function staticServer(root, headInjection, bodyInjection) {
   var isFile = false;
   try { // For supporting mounting files instead of just directories
     isFile = fs.statSync(root).isFile();
@@ -55,6 +55,8 @@ function staticServer(root) {
     var hasNoOrigin = !req.headers.origin;
 		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>"), new RegExp("</head>", "i")];
     var injectTag = null;
+		var injectBody = false;
+		var injectHead = false;
     var injectMarkdown = false;
 
     function directory() {
@@ -75,6 +77,16 @@ function staticServer(root) {
           break;
         }
       }
+
+			match = (new RegExp("</body>", "i")).exec(contents);
+			if (match) {
+				injectBody = true;
+			}
+			match = (new RegExp("</head>", "i")).exec(contents);
+			if (match) {
+				injectHead = true;
+			}
+
       if (injectTag === null && LiveServer.logLevel >= 3) {
         console.warn("Failed to inject refresh script!".yellow,
           "Couldn't find any of the tags ", injectCandidates, "from", filepath);
@@ -102,16 +114,45 @@ function staticServer(root) {
     }
 
     function inject(stream) {
+			var len = res.getHeader('Content-Length');
+			var doInject = false;
+			var p = stream.pipe;
       var originalPipe;
-      if (injectTag) {
-        // We need to modify the length given to browser
-        var len = INJECTED_CODE.length + res.getHeader('Content-Length');
 
+      if (injectTag) {
+				len += Buffer.byteLength(INJECTED_RELOAD_CODE, 'utf8');
+				doInject = true;
+			}
+			if (injectBody) {
+				len += Buffer.byteLength(bodyInjection, 'utf8');
+				doInject = true;
+			}
+			if (injectHead) {
+				len += Buffer.byteLength(headInjection, 'utf8');
+				doInject = true;
+			}
+
+			if (doInject) {
         res.setHeader('Content-Length', len);
+
         originalPipe = stream.pipe;
 				stream.pipe = function(resp) {
-					originalPipe.call(stream, es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag)).pipe(resp);
-        };
+					var p = originalPipe.call(stream, es.through(function write(data) {this.emit('data', data)}));
+
+					if (injectTag) {
+						p = p.pipe(es.replace(new RegExp(injectTag, "i"), INJECTED_RELOAD_CODE + injectTag));
+					}
+
+					if (injectHead) {
+						p = p.pipe(es.replace(new RegExp("</head>", "i"), headInjection + "</head>"));
+					}
+
+					if (injectHead) {
+						p = p.pipe(es.replace(new RegExp("</body>", "i"), bodyInjection + "</body>"));
+					}
+
+					p.pipe(resp);
+				}
       }
       if (injectMarkdown) {
         res.setHeader('Content-Type', 'text/html');
@@ -295,6 +336,8 @@ function entryPoint(staticHandler, file) {
  * @param noBrowser {boolean} Suppress automatic web browser launching
  * @param browser {string} Specify browser to use instead of system default
  * @param open {(string|string[])} Subpath(s) to open in browser, use false to suppress launch (default: server root)
+ * @param bodyInjection {string} Content to be injected before </body>
+ * @param headInjection {string} Content to be injected before </head>
  * @param mount {array} Mount directories onto a route, e.g. [['/components', './node_modules']].
  * @param logLevel {number} 0 = errors only, 1 = some, 2 = lots
  * @param file {string} Path to the entry point file
@@ -318,7 +361,9 @@ LiveServer.start = function (options) {
     "" : ((options.open === null || options.open === false) ? null : options.open);
   if (options.noBrowser) openPath = null; // Backwards compatibility with 0.7.0
   var file = options.file;
-	var staticServerHandler = staticServer(root);
+	var headInjection = options.headInjection || "";
+	var bodyInjection = options.bodyInjection || "";
+	var staticServerHandler = staticServer(root, headInjection, bodyInjection);
 	var wait = options.wait === undefined ? 100 : options.wait;
   var browser = options.browser || null;
   var htpasswd = options.htpasswd || null;
@@ -390,7 +435,7 @@ LiveServer.start = function (options) {
 		var mountPath = path.resolve(process.cwd(), mountRule[1]);
 		if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
 			watchPaths.push(mountPath);
-		app.use(mountRule[0], staticServer(mountPath));
+		app.use(mountRule[0], staticServer(mountPath, headInjection, bodyInjection));
 		if (LiveServer.logLevel >= 1)
 			console.log('Mapping %s to "%s"', mountRule[0], mountPath);
 	});

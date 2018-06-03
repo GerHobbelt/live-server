@@ -13,6 +13,8 @@ var defaultOpts = {
   proxy: [],
 	middleware: [],
 	logLevel: 2,
+	bodyInjection: "",
+	headInjection: "",
 };
 
 var opts = {
@@ -192,7 +194,13 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
       console.info("Command-line-argument-level config file specified at: ".cyan, configPath);
     }
     process.argv.splice(i, 1);
-  }
+  } else if (arg.indexOf("--head-injection=") > -1) {
+		opts.headInjection = arg.substring(17);
+		process.argv.splice(i, 1);
+	} else if (arg.indexOf("--body-injection=") > -1) {
+		opts.bodyInjection = arg.substring(17);
+		process.argv.splice(i, 1);
+	}
 }
 
 // Patch paths
