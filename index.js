@@ -10,7 +10,7 @@ var fs = require('fs'),
   send = require('send'),
   formidable = require('formidable'),
   open = require('opn'),
-  sink = require('stream-sink'),
+  sink = require('@gerhobbelt/stream-sink'),
   marked = require('marked'),
   es = require("event-stream"),
 	os = require('os'),
@@ -116,7 +116,6 @@ function staticServer(root, headInjection, bodyInjection) {
     function inject(stream) {
 			var len = res.getHeader('Content-Length');
 			var doInject = false;
-			var p = stream.pipe;
       var originalPipe;
 
       if (injectTag) {
