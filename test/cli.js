@@ -38,7 +38,7 @@ describe('command line usage', function() {
 	it('--port', function(done) {
 		exec_test([ "--port=16123", "--no-browser", "--test" ], function(error, stdout, stdin) {
 			assert(!error, error);
-			assert(stdout.indexOf("Serving") == 0, "serving string not found");
+			assert(stdout.indexOf("Serving") >= 0, "serving string not found");
 			assert(stdout.indexOf("at http://127.0.0.1:16123") != -1, "port string not found");
 			done();
 		});
@@ -46,7 +46,7 @@ describe('command line usage', function() {
 	it('--host', function(done) {
 		exec_test([ "--host=localhost", "--no-browser", "--test" ], function(error, stdout, stdin) {
 			assert(!error, error);
-			assert(stdout.indexOf("Serving") == 0, "serving string not found");
+			assert(stdout.indexOf("Serving") >= 0, "serving string not found");
 			assert(stdout.indexOf("at http://localhost:") != -1, "host string not found");
 			done();
 		});
@@ -58,14 +58,14 @@ describe('command line usage', function() {
 				"--test"
 			], function(error, stdout, stdin) {
 			assert(!error, error);
-			assert(stdout.indexOf("Serving") == 0, "serving string not found");
+			assert(stdout.indexOf("Serving") >= 0, "serving string not found");
 			done();
 		});
 	});
 	it("--https", function(done) {
 		exec_test(["--https", "--no-browser", "--test"], function(error, stdout, stdin) {
 			assert(!error, error);
-			assert(stdout.indexOf("Serving") == 0, "serving string not found");
+			assert(stdout.indexOf("Serving") >= 0, "serving string not found");
 			assert(stdout.indexOf("at https://127.0.0.1:") != -1, "https host string not found");
 			done();
 		});
