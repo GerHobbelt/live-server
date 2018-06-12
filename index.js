@@ -50,7 +50,7 @@ function staticServer(root, headInjection, bodyInjection) {
     if (e.code !== "ENOENT") throw e;
   }
   return function (req, res, next) {
-    if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
+    if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH" && req.method !== "DELETE") return next();
     var reqpath = isFile ? "" : url.parse(req.url).pathname;
     var hasNoOrigin = !req.headers.origin;
 		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>"), new RegExp("</head>", "i")];
@@ -179,7 +179,7 @@ function staticServer(root, headInjection, bodyInjection) {
       }
     }
 
-    if (req.method === "POST" || req.method === "PUT") {
+    if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH" || req.method === "DELETE") {
       var inlen = parseFloat(req.headers['content-length']);
       var intype = req.headers['content-type'];
 
