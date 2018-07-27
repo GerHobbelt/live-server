@@ -28,13 +28,11 @@
   },
   "devDependencies": {
     "eslint": "^3.13.0",
-    "jshint": "^2.9.5",
     "mocha": "^5.2.0",
     "supertest": "^3.1.0"
   },
   "scripts": {
     "lint": "eslint live-server.js index.js",
-    "hint": "jshint live-server.js index.js",
     "test": "mocha test --exit && npm run lint"
   },
   "bin": {
