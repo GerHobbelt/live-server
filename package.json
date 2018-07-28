@@ -1,6 +1,6 @@
 {
   "name": "@oasisdigital/live-server",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "simple development http server with live reload capability - fork with no-css-inject",
   "keywords": [
     "front-end",
@@ -12,7 +12,7 @@
   ],
   "author": "Tapio Vierros",
   "dependencies": {
-    "chokidar": "^1.6.0",
+    "chokidar": "^2.0.4",
     "colors": "latest",
     "connect": "3.5.x",
     "cors": "latest",
