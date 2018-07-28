@@ -161,9 +161,10 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 var dir = opts.root = process.argv[2] || "";
 
 if (opts.watch) {
-	opts.watch = opts.watch.map(function(relativePath) {
-		return path.join(dir, relativePath);
-	});
+	// Don't break Chokidar on Windows
+	// opts.watch = opts.watch.map(function(relativePath) {
+	// 	return path.join(dir, relativePath);
+	// });
 }
 if (opts.ignore) {
 	opts.ignore = opts.ignore.map(function(relativePath) {
