@@ -469,6 +469,8 @@ LiveServer.start = function (options) {
     // that's what the `|...` alt at the end of it is for. The obvious
     // regex `/([^\d]*)([\d]*)/g` will fail miserably with zero-length 
     // matches till Kingdom Come!
+    // 
+    // This way we prevent running into (catastrophic regex execution)[https://www.regular-expressions.info/catastrophic.html].
     var re = /([^\d]*)([\d]+)|([^\d]+)/g;
     var aa = [];
     var bb = [];
@@ -487,7 +489,6 @@ LiveServer.start = function (options) {
 
     // now the arrays `aa` and `bb` contain a set of the quads: (non-numeric)(numeric)(last-non-numeric)(start-index-of-match),
     // which we can use to compare the file/directory names:
-    var len = Math.min(aa.length, bb.length);
     for (var i = 0; ; i += 4) {
       var aPrefix = aa[i];
       var bPrefix = bb[i];
