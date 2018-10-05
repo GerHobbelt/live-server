@@ -53,8 +53,9 @@ function staticServer(root, headInjection, bodyInjection) {
     if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
     var reqpath = isFile ? "" : url.parse(req.url).pathname;
     var hasNoOrigin = !req.headers.origin;
-		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>"), new RegExp("</head>", "i")];
+		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>", "g"), new RegExp("</head>", "i")];
     var injectTag = null;
+		var injectCount = 0;
 		var injectBody = false;
 		var injectHead = false;
     var injectMarkdown = false;
@@ -67,13 +68,14 @@ function staticServer(root, headInjection, bodyInjection) {
     }
 
     function find_inject_tag(filepath, contents) {
-      var match;
+      var matches;
 
       injectTag = null;
       for (var i = 0; i < injectCandidates.length; ++i) {
-        match = injectCandidates[i].exec(contents);
-        if (match) {
-          injectTag = match[0];
+					matches = contents.match(injectCandidates[i]);
+					injectCount = matches && matches.length || 0;
+					if (injectCount) {
+						injectTag = matches[0];
           break;
         }
       }
@@ -130,7 +132,7 @@ function staticServer(root, headInjection, bodyInjection) {
 				len += Buffer.byteLength(headInjection, 'utf8');
 				doInject = true;
 			}
-
+				var len = INJECTED_CODE.length + res.getHeader('Content-Length');
 			if (doInject) {
         res.setHeader('Content-Length', len);
 
