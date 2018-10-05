@@ -3,7 +3,7 @@ var path = require('path');
 var fs = require('fs');
 var assign = require('object-assign');
 var liveServer = require("./index");
-var jsonminify = require("jsonminify");
+var JSON5 = require("@gerhobbelt/json5");
 
 var defaultOpts = {
   host: process.env.IP,
@@ -211,29 +211,45 @@ opts.root = process.argv[2] || process.cwd();
 if (!configPath) {
   var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
   if (homeDir) {
-    var userConfigPath = path.join(homeDir, '.live-server.json');
+    var userConfigPath = path.join(homeDir, '.live-server.json5');
     if (fs.existsSync(userConfigPath)) {
       if (opts.logLevel) {
         console.log("User-level config file detected at: ".cyan, userConfigPath);
       }
       configPath = userConfigPath;
+    } else {
+      userConfigPath = path.join(homeDir, '.live-server.json');
+      if (fs.existsSync(userConfigPath)) {
+        if (opts.logLevel) {
+          console.log("User-level config file detected at: ".cyan, userConfigPath);
+        }
+        configPath = userConfigPath;
+      }
     }
   }
 }
 if (!configPath) {
-  var projectConfigPath = path.join(opts.root, '.live-server.json');
+  var projectConfigPath = path.join(opts.root, '.live-server.json5');
   if (fs.existsSync(projectConfigPath)) {
     if (opts.logLevel) {
       console.log("Project-level config file detected at: ".cyan, projectConfigPath);
     }
     configPath = projectConfigPath;
+  } else {
+    projectConfigPath = path.join(opts.root, '.live-server.json');
+    if (fs.existsSync(projectConfigPath)) {
+      if (opts.logLevel) {
+        console.log("Project-level config file detected at: ".cyan, projectConfigPath);
+      }
+      configPath = projectConfigPath;
+    }
   }
 }
 
 // Note: if `configPath` is set, it MUST exist (or trigger a fatal error)
 if (configPath) {
   var configData = fs.readFileSync(configPath, 'utf8');
-  assign(defaultOpts, JSON.parse(configData));
+  assign(defaultOpts, JSON5.parse(configData));
   if (defaultOpts.ignorePattern) defaultOpts.ignorePattern = new RegExp(defaultOpts.ignorePattern);
 }
 // Merge config file/default options and the ones obtained from the command line:
