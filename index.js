@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 var fs = require('fs'),
   connect = require('connect'),
-  serveIndex = require('serve-index'),
+  serveIndex = require('@gerhobbelt/serve-index'),
   logger = require('morgan'),
   WebSocket = require('faye-websocket'),
   path = require('path'),
@@ -132,7 +132,7 @@ function staticServer(root, headInjection, bodyInjection) {
 				len += Buffer.byteLength(headInjection, 'utf8');
 				doInject = true;
 			}
-				var len = INJECTED_CODE.length + res.getHeader('Content-Length');
+				var len = INJECTED_RELOAD_CODE.length + res.getHeader('Content-Length');
 			if (doInject) {
         res.setHeader('Content-Length', len);
 
@@ -170,7 +170,7 @@ function staticServer(root, headInjection, bodyInjection) {
         
             find_inject_tag(template_filepath, html);
             if (injectTag) {
-              html = html.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag);
+              html = html.replace(new RegExp(injectTag, "i"), INJECTED_RELOAD_CODE + injectTag);
             }
 
             s.setHeader('Content-Length', html.length);
