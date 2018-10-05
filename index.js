@@ -449,13 +449,12 @@ LiveServer.start = function (options) {
 			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
 	});
 
+  //
+  // Sort helper: sort file & directory names numerically based on their numeric parts, 
+  // if they have any *and* the non-numeric prefixes match up.
+  // Otherwise sort them alphanumerically.
+  // 
 	function indexPageSort(a, b) {
-	  function getAscendingSortValue(d) {
-	    if (d === 0) return 0;
-	    else if (d > 0) return 1;
-	    else return -1;
-	  }
-	
 	  var aIsADirectory = a.stat && a.stat.isDirectory();
 	  var bIsADirectory = b.stat && b.stat.isDirectory();
 	  var directoryComparison = Number(bIsADirectory) - Number(aIsADirectory);
@@ -463,41 +462,68 @@ LiveServer.start = function (options) {
 	    return directoryComparison;
     }
 	
-	  function stripFileExtension(filename) {
-	    var splitFilename = filename.split('.');
-	    return splitFilename.slice(0, splitFilename.length - 1).join('.');
-	  }
-	
-	  var aParsedName = a.name;
-	  var bParsedName = b.name;
-	  if (!aIsADirectory) {
-	    aParsedName = stripFileExtension(a.name);
-	  }
-	  if (!bIsADirectory) {
-	    bParsedName = stripFileExtension(b.name);
-	  }
-	
-	  // calculate numberTypeComparison sort value
-	  var aCanBeCastToANumber = !Number.isNaN(Number(aParsedName));
-	  var bCanBeCastToANumber = !Number.isNaN(Number(bParsedName));
-	  var onlyA = aCanBeCastToANumber && !bCanBeCastToANumber;
-	  var onlyB = !aCanBeCastToANumber && bCanBeCastToANumber;
-	  // if both can be numbers or neither can be numbers
-	  var numberTypeComparison = 0;
-	  if (onlyA) numberTypeComparison = -1;
-	  else if (onlyB) numberTypeComparison = 1;
-	
-	  var numberValueComparison = getAscendingSortValue(Number(aParsedName) - Number(bParsedName));
-	  var stringComparison = String(a.name).toLocaleLowerCase().localeCompare(String(b.name).toLocaleLowerCase());
-	
-	  if (aCanBeCastToANumber && bCanBeCastToANumber) {
-	    return numberValueComparison;
-	  } else if (numberTypeComparison !== 0) {
-	    // one can be cast to a number
-	    // and the other cannot
-	    return numberTypeComparison;
-	  } 
-	  return stringComparison;
+    var aParsedName = a.name;
+    var bParsedName = b.name;
+
+    // make sure the regex consumes at least one character each round:
+    // that's what the `|...` alt at the end of it is for. The obvious
+    // regex `/([^\d]*)([\d]*)/g` will fail miserably with zero-length 
+    // matches till Kingdom Come!
+    var re = /([^\d]*)([\d]+)|([^\d]+)/g;
+    var aa = [];
+    var bb = [];
+    // we have to collect all matches for aParsedName before we do the same
+    // for bParsedName due to the nature of the RegExp.exec() behaviour:
+    for (;;) {
+      var match = re.exec(aParsedName); 
+      if (match === null) break;
+      aa.push(match[1], match[2], match[3], match.index);
+    }
+    for (;;) {
+      var match = re.exec(bParsedName); 
+      if (match === null) break;
+      bb.push(match[1], match[2], match[3], match.index);
+    }
+
+    // now the arrays `aa` and `bb` contain a set of the quads: (non-numeric)(numeric)(last-non-numeric)(start-index-of-match),
+    // which we can use to compare the file/directory names:
+    var len = Math.min(aa.length, bb.length);
+    for (var i = 0; ; i += 4) {
+      var aPrefix = aa[i];
+      var bPrefix = bb[i];
+
+      var stringComparison = String(aPrefix).toLocaleLowerCase().localeCompare(String(bPrefix).toLocaleLowerCase());
+      if (stringComparison) {
+        // WARNING: it may be that one of the files is lacking a numric part, hence we need 
+        // to perform this comparison once again with the full tail of both:
+        if (aPrefix === '' || bPrefix === '') {
+          aPrefix = aParsedName.substring(aa[i + 3]);
+          bPrefix = bParsedName.substring(bb[i + 3]);
+          stringComparison = String(aPrefix).toLocaleLowerCase().localeCompare(String(bPrefix).toLocaleLowerCase());
+        }
+        return stringComparison;
+      }
+
+      var aNumber = Number(aa[i + 1]);
+      var bNumber = Number(bb[i + 1]);
+      var aCanBeCastToANumber = !isNaN(aNumber);
+      var bCanBeCastToANumber = !isNaN(bNumber);
+      var nanComparison = Number(bCanBeCastToANumber) - Number(aCanBeCastToANumber);
+      if (nanComparison === 0 && aCanBeCastToANumber) {
+        // this implies bCanBeCastToANumber=true once we arrive here!
+        var numberComparison = Math.sign(bNumber - aNumber);
+        if (numberComparison !== 0) {
+          return numberComparison;
+        }
+      } else {
+        // one of the files has only a non-numeric tail left (while that tail *may* be empty),
+        // hence we can only end now with an alphanumeric comparison of the remaining tails:
+        aPrefix = aParsedName.substring(aa[i + 3]);
+        bPrefix = bParsedName.substring(bb[i + 3]);
+        stringComparison = String(aPrefix).toLocaleLowerCase().localeCompare(String(bPrefix).toLocaleLowerCase());
+        return stringComparison;
+      }
+    }
 	}
 
 	app.use(staticServerHandler) // Custom static server
