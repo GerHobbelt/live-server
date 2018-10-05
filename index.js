@@ -15,7 +15,8 @@ var fs = require('fs'),
   es = require("event-stream"),
 	os = require('os'),
 	chokidar = require('chokidar'),
-  mkdirp = require('mkdirp');
+  mkdirp = require('mkdirp'),
+  proxyMiddleware = require('http-proxy-middleware');
 require('colors');
 
 var INJECTED_RELOAD_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
@@ -454,9 +455,8 @@ LiveServer.start = function (options) {
 	});
 	proxy.forEach(function(proxyRule) {
 		var proxyOpts = url.parse(proxyRule[1]);
-		proxyOpts.via = true;
-		proxyOpts.preserveHost = false;
-		app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
+		proxyOpts.changeOrigin = false;
+		app.use(proxyRule[0], proxyMiddleware(proxyOpts));
 		if (LiveServer.logLevel >= 1)
 			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
 	});

@@ -28,7 +28,7 @@
     "morgan": "1.9.1",
     "object-assign": "4.1.1",
     "opn": "5.4.0",
-    "proxy-middleware": "0.15.0",
+    "http-proxy-middleware": "0.0.1",
     "send": "0.16.2",
     "spdy": "3.4.7"
   },
