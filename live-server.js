@@ -3,6 +3,7 @@ var path = require('path');
 var fs = require('fs');
 var assign = require('object-assign');
 var liveServer = require("./index");
+var jsonminify = require("jsonminify");
 
 var defaultOpts = {
   host: process.env.IP,
