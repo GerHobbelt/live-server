@@ -448,9 +448,61 @@ LiveServer.start = function (options) {
 		if (LiveServer.logLevel >= 1)
 			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
 	});
+
+	function indexPageSort(a, b) {
+	  function getAscendingSortValue(d) {
+	    if (d === 0) return 0;
+	    else if (d > 0) return 1;
+	    else return -1;
+	  }
+	
+	  var aIsADirectory = a.stat && a.stat.isDirectory();
+	  var bIsADirectory = b.stat && b.stat.isDirectory();
+	  var directoryComparison = Number(bIsADirectory) - Number(aIsADirectory);
+	  if (directoryComparison !== 0) {
+	    return directoryComparison;
+    }
+	
+	  function stripFileExtension(filename) {
+	    var splitFilename = filename.split('.');
+	    return splitFilename.slice(0, splitFilename.length - 1).join('.');
+	  }
+	
+	  var aParsedName = a.name;
+	  var bParsedName = b.name;
+	  if (!aIsADirectory) {
+	    aParsedName = stripFileExtension(a.name);
+	  }
+	  if (!bIsADirectory) {
+	    bParsedName = stripFileExtension(b.name);
+	  }
+	
+	  // calculate numberTypeComparison sort value
+	  var aCanBeCastToANumber = !Number.isNaN(Number(aParsedName));
+	  var bCanBeCastToANumber = !Number.isNaN(Number(bParsedName));
+	  var onlyA = aCanBeCastToANumber && !bCanBeCastToANumber;
+	  var onlyB = !aCanBeCastToANumber && bCanBeCastToANumber;
+	  // if both can be numbers or neither can be numbers
+	  var numberTypeComparison = 0;
+	  if (onlyA) numberTypeComparison = -1;
+	  else if (onlyB) numberTypeComparison = 1;
+	
+	  var numberValueComparison = getAscendingSortValue(Number(aParsedName) - Number(bParsedName));
+	  var stringComparison = String(a.name).toLocaleLowerCase().localeCompare(String(b.name).toLocaleLowerCase());
+	
+	  if (aCanBeCastToANumber && bCanBeCastToANumber) {
+	    return numberValueComparison;
+	  } else if (numberTypeComparison !== 0) {
+	    // one can be cast to a number
+	    // and the other cannot
+	    return numberTypeComparison;
+	  } 
+	  return stringComparison;
+	}
+
 	app.use(staticServerHandler) // Custom static server
 		.use(entryPoint(staticServerHandler, file))
-		.use(serveIndex(root, { icons: true }));
+		.use(serveIndex(root, { icons: true, sort: indexPageSort }));
 
 	var server, protocol;
 	if (https !== null) {
