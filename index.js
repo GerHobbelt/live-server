@@ -87,7 +87,7 @@ function staticServer(root, headInjection, bodyInjection) {
     if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
     var reqpath = isFile ? "" : url.parse(req.url).pathname;
     var hasNoOrigin = !req.headers.origin;
-		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>", "g"), new RegExp("</head>", "i")];
+		var injectCandidates = [ "body", "svg", "head" ];
     var injectTag = null;
 		var injectCount = 0;
 		var injectBody = false;
@@ -105,11 +105,14 @@ function staticServer(root, headInjection, bodyInjection) {
       var matches;
 
       injectTag = null;
+
+		  // first looking for tags with high priority
       for (var i = 0; i < injectCandidates.length; ++i) {
-					matches = contents.match(injectCandidates[i]);
-					injectCount = matches && matches.length || 0;
-					if (injectCount) {
-						injectTag = matches[0];
+        var tag_re = new RegExp("</" + injectCandidates[i] + ">", "ig");
+				matches = contents.match(tag_re);
+				injectCount = (matches && matches.length) || 0;
+				if (injectCount) {
+					injectTag = matches[0];
           break;
         }
       }
@@ -123,9 +126,23 @@ function staticServer(root, headInjection, bodyInjection) {
 				injectHead = true;
 			}
 
-      if (injectTag === null && LiveServer.logLevel >= 3) {
+  		// if injectTag not found then trying to find at least one closing tag on the page.
+			if (injectTag === null) {
+        // ignore the </HTML> tag as that one will be useless = occurring too late to matter:
+        var c2 = contents.replace(/<\/\s*html\s*>/i, '');
+  			var start = c2.lastIndexOf('</');
+				var end = c2.lastIndexOf('>');
+
+				if (start !== -1 && end !== -1) {
+					injectTag = c2.slice(start, end + 1);
+				}
+			}
+
+			if (injectTag) {
+				console.log('Script is injected in the ' + injectTag + ' tag.');
+			} else {
         console.warn("Failed to inject refresh script!".yellow,
-          "Couldn't find any of the tags ", injectCandidates, "from", filepath);
+          "Couldn't find any of the tags", injectCandidates, "from", filepath, "nor any other closing tag.");
       }
     }
 
