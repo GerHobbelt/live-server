@@ -52,7 +52,7 @@
     "url": "https://github.com/GerHobbelt/live-server.git"
   },
   "engines": {
-    "node": ">=6.0"
+    "node": ">=8.3.0"
   },
   "preferGlobal": true,
   "license": "MIT",
