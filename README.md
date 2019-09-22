@@ -56,6 +56,7 @@ Command line parameters:
 * `--middleware=PATH` - path to .js file exporting a middleware function to add; can be a name without path nor extension to reference bundled middlewares in `middleware` folder
 * `--entry-file=PATH` - serve this file (server root relative) in place of missing files (useful for single page apps)
 * `--mount=ROUTE:PATH` - serve the paths contents under the defined route (multiple definitions possible)
+* `--no-directories` - disable directory listings
 * `--spa` - translate requests from /abc to /#/abc (handy for Single Page Apps)
 * `--spa-ignore-assets` - when `--spa` is passed, this option stops the server intercepting requests for any assets (CSS, JS and so on)
 * `--wait=MILLISECONDS` - (default 100ms) wait for all changes, before reloading

@@ -202,6 +202,10 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		opts.bodyInjection = arg.substring(17);
 		process.argv.splice(i, 1);
 	}
+	else if (arg === "--no-directories") {
+		opts.noDirectories = true;
+		process.argv.splice(i, 1);
+	}
 }
 
 // Patch paths

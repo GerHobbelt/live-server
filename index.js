@@ -420,6 +420,7 @@ LiveServer.start = function (options) {
   var middleware = options.middleware || [];
 	var noCssInject = options.noCssInject;
 	var httpsModule = options.httpsModule;
+	var noDirectories = options.noDirectories || false;
 
   LiveServer.markdownStyle = options.markdown;
 
@@ -589,9 +590,14 @@ LiveServer.start = function (options) {
     }
 	}
 
-	app.use(staticServerHandler) // Custom static server
-		.use(entryPoint(staticServerHandler, file))
-		.use(serveIndex(root, { icons: true, sort: indexPageSort }));
+	if (noDirectories) {
+		app.use(staticServerHandler) // Custom static server
+		  .use(entryPoint(staticServerHandler, file));
+	} else {
+		app.use(staticServerHandler) // Custom static server
+	  	.use(entryPoint(staticServerHandler, file))
+  		.use(serveIndex(root, { icons: true, sort: indexPageSort }));
+	}
 
 	var server;
 	if (protocol === "https") {
