@@ -33,14 +33,14 @@
     "spdy": "4.0.1"
   },
   "devDependencies": {
+    "eslint": "6.4.0",
     "mocha": "6.2.0",
-    "supertest": "4.0.2",
-    "eslint": "6.4.0"
+    "supertest": "4.0.2"
   },
   "scripts": {
     "lint": "eslint live-server.js index.js",
     "fix": "eslint --fix live-server.js index.js",
-    "test": "mocha test --timeout 5000 && npm run lint",
+    "test": "mocha test --timeout 5000 --exit && npm run lint",
     "clear": "rm -f package-lock.json ; rm -rf node_modules",
     "pub": "npm publish --access public"
   },
