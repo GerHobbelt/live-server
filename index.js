@@ -11,7 +11,7 @@ var fs = require('fs'),
   formidable = require('formidable'),
   open = require('opn'),
   sink = require('@gerhobbelt/stream-sink'),
-  marked = require('marked'),
+  MarkdownIt = require('@gerhobbelt/markdown-it'),
   es = require("event-stream"),
 	os = require('os'),
 	chokidar = require('chokidar'),
@@ -20,6 +20,39 @@ var fs = require('fs'),
 require('colors');
 
 var INJECTED_RELOAD_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
+
+// MarkdownIt: options list
+var markdown = MarkdownIt({
+  html:         true,         // Enable HTML tags in source
+  breaks:       false,        // Convert '\n' in paragraphs into <br>
+  linkify:      true,         // Autoconvert URL-like text to links
+
+  // Enable some language-neutral replacement + quotes beautification
+  typographer:  true,
+
+  // Double + single quotes replacement pairs, when typographer enabled,
+  // and smartquotes on. Could be either a String or an Array.
+  //
+  // For example, you can use '«»„“' for Russian, '„“‚‘' for German,
+  // and ['«\xA0', '\xA0»', '‹\xA0', '\xA0›'] for French (including nbsp).
+  quotes: '“”‘’',
+
+  // Highlighter function. Should return escaped HTML,
+  // or '' if the source string is not changed and should be escaped externally.
+  // If result starts with <pre... internal wrapper is skipped.
+  highlight: function (/*str, lang*/) { return ''; },
+  
+  // Configure default attributes for given tags
+  default_attributes:  { 'a': [/*['rel', 'nofollow']*/] }
+});
+
+// MarkdownIt Plugins load
+// 
+// markdown = markdown
+//             .use(plugin1)
+//             .use(plugin2, opts, ...)
+//             .use(plugin3);
+
 
 var LiveServer = {
   server: null,
@@ -175,11 +208,11 @@ function staticServer(root, headInjection, bodyInjection) {
         originalPipe = stream.pipe;
         stream.pipe = function (s) {
           originalPipe.call(stream, sink()).then(function (md) {
-            var content = marked(md);
+            var content = markdown.render(md);
             var template_filepath = __dirname + '/markdown.html';
             var html = fs.readFileSync(template_filepath).toString();
             html = html.replace('%content%', content);
-            html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle]);
+            html = html.replace('%class%', markdownStyles[LiveServer.markdownStyle] || markdownStyles['html']);
         
             find_inject_tag(template_filepath, html);
             if (injectTag) {
@@ -430,6 +463,17 @@ LiveServer.start = function (options) {
 		app.use(mw);
 	});
 
+  var protocol;
+  var httpsConfig = https;
+  if (https !== null) {
+    if (typeof https === "string") {
+      httpsConfig = require(path.resolve(process.cwd(), https));
+    }
+    protocol = "https";
+  } else {
+    protocol = "http";
+  }
+
 	// Use http-auth if configured
 	if (htpasswd !== null) {
 		var auth = require('http-auth');
@@ -456,7 +500,13 @@ LiveServer.start = function (options) {
 	proxy.forEach(function(proxyRule) {
 		var proxyOpts = url.parse(proxyRule[1]);
 		proxyOpts.changeOrigin = false;
-		app.use(proxyRule[0], proxyMiddleware(proxyOpts));
+    //proxyOpts.changeOrigin = true;               // needed for virtual hosted sites
+    proxyOpts.preserveHost = true;
+    var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+    var serveURL = protocol + '://' + openHost + ':' + port;
+    proxyOpts.target = serveURL; 
+    console.error('proxy:', proxyOpts);
+		app.use(proxyRule[0], proxyMiddleware('/', proxyOpts));
 		if (LiveServer.logLevel >= 1)
 			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
 	});
@@ -543,17 +593,11 @@ LiveServer.start = function (options) {
 		.use(entryPoint(staticServerHandler, file))
 		.use(serveIndex(root, { icons: true, sort: indexPageSort }));
 
-	var server, protocol;
-	if (https !== null) {
-		var httpsConfig = https;
-		if (typeof https === "string") {
-			httpsConfig = require(path.resolve(process.cwd(), https));
-		}
+	var server;
+	if (protocol === "https") {
 		server = require(httpsModule).createServer(httpsConfig, app);
-		protocol = "https";
 	} else {
 		server = http.createServer(app);
-		protocol = "http";
 	}
 
 	// Handle server startup errors
