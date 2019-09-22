@@ -391,6 +391,7 @@ function entryPoint(staticHandler, file) {
  * @param wait {number} Server will wait the specified number of milliseconds for all changes, before reloading
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
  * @param middleware {array} Append middleware to stack, e.g. [function (req, res, next) { next(); }].
+ * @param watchDotfiles Don't ignore changes to files & folders beginning with '.' from the watch directory
  * @param cors {boolean} Enables CORS for any origin (reflects request origin, requests with credentials are supported)
  * @param https {string} PATH to a HTTPS configuration module
  * @param proxy {string} Proxy all requests for ROUTE to URL (string format: "ROUTE:URL") 
@@ -709,20 +710,38 @@ LiveServer.start = function (options) {
     clients.push(ws);
   });
 
-	var ignored = [
-		function(testPath) { // Always ignore dotfiles (important e.g. because editor hidden temp files)
-			return testPath !== "." && /(^[.#]|(?:__|~)$)/.test(path.basename(testPath));
+	var alreadyWarnedDotfiles = false;
+	var ignoredPaths = [
+		function(testPath) { 
+			/*
+				Ignore dotfiles by default (important e.g. because editor
+				hidden temp files), unless options.watchDotfiles is truthy.
+
+				Regex explanation: 
+				- Any relative or absolute path (the first capture group)
+				- starting with a literal '.', and then followed by at least
+				  one character (which excludes the CWD path '.')
+			*/
+			var notDotfileOrCwd = /(^|[\/\\])\../;
+			var ignoreThisPath = options.watchDotfiles ? false : notDotfileOrCwd.test(path.basename(testPath));
+			if (ignoreThisPath && LiveServer.logLevel >= 1) {
+				if (alreadyWarnedDotfiles === false) {
+					console.log('Ignoring files in paths beginning with ".", eg: %s\nUse "--watch-dotfiles" to instead watch these.', path.basename(testPath));
+					alreadyWarnedDotfiles = true;
+				}
+      }
+			return ignoreThisPath;
 		}
 	];
 	if (options.ignore) {
-		ignored = ignored.concat(options.ignore);
+		ignoredPaths = ignoredPaths.concat(options.ignore);
 	}
 	if (options.ignorePattern) {
-		ignored.push(options.ignorePattern);
+		ignoredPaths.push(options.ignorePattern);
 	}
   // Setup file watcher
 	LiveServer.watcher = chokidar.watch(watchPaths, {
-		ignored: ignored,
+		ignored: ignoredPaths,
 		ignoreInitial: true
 	});
 	async function handleChange(changePath) {
