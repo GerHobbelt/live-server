@@ -87,7 +87,7 @@ function staticServer(root, headInjection, bodyInjection) {
     if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "POST" && req.method !== "PUT") return next();
     var reqpath = isFile ? "" : url.parse(req.url).pathname;
     var hasNoOrigin = !req.headers.origin;
-		var injectCandidates = [ "body", "svg", "head" ];
+		var injectCandidates = [ "body", "head", "svg" ];
     var injectTag = null;
 		var injectCount = 0;
 		var injectBody = false;
@@ -108,7 +108,7 @@ function staticServer(root, headInjection, bodyInjection) {
 
 		  // first looking for tags with high priority
       for (var i = 0; i < injectCandidates.length; ++i) {
-        var tag_re = new RegExp("</" + injectCandidates[i] + ">", "ig");
+        var tag_re = new RegExp("</\\s*" + injectCandidates[i] + "\\s*>", "i");
 				matches = contents.match(tag_re);
 				injectCount = (matches && matches.length) || 0;
 				if (injectCount) {
@@ -117,11 +117,11 @@ function staticServer(root, headInjection, bodyInjection) {
         }
       }
 
-			match = (new RegExp("</body>", "i")).exec(contents);
+			match = (new RegExp("</\\s*body\\s*>", "i")).exec(contents);
 			if (match) {
 				injectBody = true;
 			}
-			match = (new RegExp("</head>", "i")).exec(contents);
+			match = (new RegExp("</\\s*head\\s*>", "i")).exec(contents);
 			if (match) {
 				injectHead = true;
 			}
@@ -133,7 +133,7 @@ function staticServer(root, headInjection, bodyInjection) {
   			var start = c2.lastIndexOf('</');
 				var end = c2.lastIndexOf('>');
 
-				if (start !== -1 && end !== -1) {
+				if (start !== -1 && end > start) {
 					injectTag = c2.slice(start, end + 1);
 				}
 			}
@@ -204,15 +204,15 @@ function staticServer(root, headInjection, bodyInjection) {
 					var p = originalPipe.call(stream, es.through(function write(data) {this.emit('data', data)}));
 
 					if (injectTag) {
-						p = p.pipe(es.replace(new RegExp(injectTag, "i"), INJECTED_RELOAD_CODE + injectTag));
+						p = p.pipe(es.replace(injectTag, INJECTED_RELOAD_CODE + injectTag));
 					}
 
 					if (injectHead) {
-						p = p.pipe(es.replace(new RegExp("</head>", "i"), headInjection + "</head>"));
+						p = p.pipe(es.replace(new RegExp("</\\s*head\\s*>", "i"), headInjection + "</head>"));
 					}
 
 					if (injectHead) {
-						p = p.pipe(es.replace(new RegExp("</body>", "i"), bodyInjection + "</body>"));
+						p = p.pipe(es.replace(new RegExp("</\\s*body\\s*>", "i"), bodyInjection + "</body>"));
 					}
 
 					p.pipe(resp);
@@ -391,7 +391,7 @@ function entryPoint(staticHandler, file) {
 /**
  * Start a live server with parameters given as an object
  * @param host {string} Address to bind to (default: 0.0.0.0)
- * @param port {number} Port number (default: 8080)
+ * @param port {number} Port number (default: 8085)
  * @param root {string} Path to root directory (default: cwd)
  * @param watch {array} Paths to exclusively watch for changes
  * @param ignore {array} Paths to ignore when watching files for changes
@@ -417,10 +417,11 @@ function entryPoint(staticHandler, file) {
 LiveServer.start = function (options) {
   options = options || {};
   var host = options.host || '0.0.0.0';
-  var port = options.port !== undefined ? options.port : 8080; // 0 means random
+  var port = options.port !== undefined ? options.port : 8085; // 0 means random
   var root = options.root || process.cwd();
   var mount = options.mount || [];
   var watchPaths = options.watch || [root];
+  LiveServer.watchPaths = watchPaths;
   LiveServer.logLevel = options.logLevel === undefined ? 2 : options.logLevel;
   var openPath = (options.open === undefined || options.open === true) ?
     "" : ((options.open === null || options.open === false) ? null : options.open);
@@ -632,6 +633,8 @@ LiveServer.start = function (options) {
 		server = http.createServer(app);
 	}
 
+  LiveServer.server = server;
+
 	// Handle server startup errors
 	server.addListener('error', function(e) {
 		if (e.code === 'EADDRINUSE') {
@@ -648,8 +651,6 @@ LiveServer.start = function (options) {
 
 	// Handle successful server
 	server.addListener('listening', function(/*e*/) {
-		LiveServer.server = server;
-
 		var address = server.address();
 		var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : address.address;
 		var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
@@ -750,7 +751,7 @@ LiveServer.start = function (options) {
 			var ignoreThisPath = options.watchDotfiles ? false : notDotfileOrCwd.test(path.basename(testPath));
 			if (ignoreThisPath && LiveServer.logLevel >= 1) {
 				if (alreadyWarnedDotfiles === false) {
-					console.log('Ignoring files in paths beginning with ".", eg: %s\nUse "--watch-dotfiles" to instead watch these.', path.basename(testPath));
+					console.log('Ignoring files in paths beginning with ".", eg: %s\nUse "--watch-dotfiles" to also watch these.', path.basename(testPath));
 					alreadyWarnedDotfiles = true;
 				}
       }
@@ -766,9 +767,11 @@ LiveServer.start = function (options) {
   // Setup file watcher
 	LiveServer.watcher = chokidar.watch(watchPaths, {
 		ignored: ignoredPaths,
-		ignoreInitial: true
+		ignoreInitial: true,
+    atomic: 1000,              // treat editors' "Atomic writes" as such when they complete within 1 second. See https://github.com/paulmillr/chokidar#user-content-errors        
 	});
 	async function handleChange(changePath) {
+    console.log("CHANGE:", changePath);
 		var cssChange = path.extname(changePath) === ".css" && !noCssInject;
 
 		if (LiveServer.logLevel >= 1) {
@@ -792,7 +795,7 @@ LiveServer.start = function (options) {
 		.on("addDir", handleChange)
 		.on("unlinkDir", handleChange)
 		.on("ready", function () {
-			if (LiveServer.logLevel >= 1)
+			if (LiveServer.logLevel >= 1 || true)
 				console.log("Ready for changes".cyan);
 		})
 		.on("error", function (err) {
@@ -823,13 +826,35 @@ LiveServer.start = function (options) {
 };
 
 LiveServer.shutdown = function () {
+  console.log("shutdown...");
 	var watcher = LiveServer.watcher;
 	if (watcher) {
+    var wl = watcher.getWatched();
+    watcher.unwatch(LiveServer.watchPaths);
+    var awl = [];
+    for (var key in wl) {
+      awl.push(key);
+    }
+    watcher.unwatch(awl);
 		watcher.close();
   }
   var server = LiveServer.server;
-  if (server)
-    server.close();
+  if (server) {
+    // see also https://stackoverflow.com/questions/14626636/how-do-i-shutdown-a-node-js-https-server-immediately
+    server.keepAliveTimeout = 1; // ensure keep-alive connections are closed ASAP 
+    server.timeout = 1;
+    server.close(() =>  {
+      console.log("server closed...");
+    });
+    setImmediate(function () {
+      server.emit('close');
+    });
+  }
+  // chokidar doesn't terminate.
+  // throw exception to kill the app anyway
+  setTimeout(() => {
+    throw new Error("HACK: throw exception as long as https://github.com/paulmillr/chokidar/issues/855 has not been properly resolved");
+  }, 3000);
 };
 
 module.exports = LiveServer;

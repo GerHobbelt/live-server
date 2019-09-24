@@ -25,7 +25,7 @@ describe('command line usage', function() {
 	it('--help', function(done) {
 		exec_test([ "--help" ], function(error, stdout, stdin) {
 			assert(!error, error);
-			assert(stdout.indexOf("Usage: live-server") === 0, "usage not found");
+			assert(stdout.indexOf("Usage: live-server") >= 0, "usage not found");
 			done();
 		});
 	});
