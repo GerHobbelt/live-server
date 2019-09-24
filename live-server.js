@@ -218,6 +218,16 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 
 // Patch paths
 opts.root = process.argv[2] || process.cwd();
+var root_stats = fs.existsSync(opts.root);
+if (!root_stats) {
+  console.error("The specified ROOT directory '" + opts.root + "' does not exist.");
+  process.exit();
+}
+root_stats = fs.statSync(opts.root);
+if (!root_stats.isDirectory()) {
+  console.error("The specified ROOT path '" + opts.root + "' is not a directory.");
+  process.exit();
+}
 
 // When no config file has been specified, load a user-level or project-level one, iff available:
 if (!configPath) {
