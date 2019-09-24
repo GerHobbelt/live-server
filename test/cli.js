@@ -14,6 +14,7 @@ function exec_test(args, callback) {
 }
 
 describe('command line usage', function() {
+	this.timeout(3000);
 	it('--version', function(done) {
 		exec_test([ "--version" ], function(error, stdout, stdin) {
 			assert(!error, error);
