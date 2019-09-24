@@ -5,23 +5,25 @@ var assign = require('object-assign');
 var liveServer = require("./index");
 var JSON5 = require("@gerhobbelt/json5");
 
-var opts = {
-	host: process.env.IP,
-	port: process.env.PORT,
-	open: true,
-	mount: [],
-	proxy: [],
+var defaultOpts = {
+  host: process.env.IP,
+  port: process.env.PORT,
+  open: true,
+  markdown: 'html',
+  mount: [],
+  proxy: [],
 	middleware: [],
 	logLevel: 2,
+	bodyInjection: "",
+	headInjection: "",
 };
 
-var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
-var configPath = path.join(homeDir, '.live-server.json');
-if (fs.existsSync(configPath)) {
-	var userConfig = fs.readFileSync(configPath, 'utf8');
-	assign(opts, JSON.parse(userConfig));
-	if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
-}
+var opts = {
+  // MUST be empty as we will merge any option set in here to `defaultOpts` 
+  // to produce the definitive `opts` collection for the server.
+};
+
+var configPath;
 
 for (var i = process.argv.length - 1; i >= 2; --i) {
   var arg = process.argv[i];
@@ -152,39 +154,139 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		opts.httpsModule = arg.substring(15);
 		process.argv.splice(i, 1);
 	}
-	else if (arg.indexOf("--proxy=") > -1) {
-		// split only on the first ":", as the URL will contain ":" as well
-		var match = arg.substring(8).match(/([^:]+):(.+)$/);
-		opts.proxy.push([ match[1], match[2] ]);
+	else if (arg.indexOf("--https") > -1) {
+		opts.https = path.join(__dirname, 'test/conf/https.conf.js');
+		process.argv.splice(i, 1);
+	}
+  else if (arg.indexOf("--proxy=") > -1) {
+    // split only on the first ":", as the URL will contain ":" as well
+    var match = arg.substring(8).match(/([^:]+):(.+)$/);
+    if (!opts.proxy) opts.proxy = [];
+    opts.proxy.push([ match[1], match[2] ]);
+    process.argv.splice(i, 1);
+  }
+	else if (arg.indexOf("--proxy-unsecure") > -1) {
+		opts.unsecureProxy = true;
 		process.argv.splice(i, 1);
 	}
 	else if (arg.indexOf("--middleware=") > -1) {
+    if (!opts.middleware) opts.middleware = [];
 		opts.middleware.push(arg.substring(13));
 		process.argv.splice(i, 1);
 	}
-	else if (arg === "--help" || arg === "-h") {
-		console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--no-css-inject] [--entry-file=PATH] [--spa] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https=PATH] [--https-module=MODULE_NAME] [--proxy=PATH] [PATH]');
-		process.exit();
+	else if (arg === "--watch-dotfiles") {
+		opts.watchDotfiles = true;
+		process.argv.splice(i, 1);
 	}
-	else if (arg === "--test") {
-		// Hidden param for tests to exit automatically
-		setTimeout(liveServer.shutdown, 500);
+  else if (arg === "--help" || arg === "-h") {
+    console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [-V|--verbose] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--no-css-inject] [--entry-file=PATH] [--spa] [--spa-ignore-assets] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https[=PATH]] [--https-module=MODULE_NAME] [--proxy=PATH] [--proxy-unsecure] [--config=FILE] [PATH]');
+    process.exit();
+  }
+  else if (arg === "--test") {
+    // Hidden param for tests to exit automatically
+    setTimeout(liveServer.shutdown, 500);
+    process.argv.splice(i, 1);
+  } else if (arg === "--no-markdown") {
+    opts.markdown = false;
+    process.argv.splice(i, 1);
+  } else if (arg.indexOf("--markdown=") > -1) {
+    opts.markdown = arg.substring(11);
+    var valid = Object.keys(liveServer.markdownStyles);
+    if(valid.indexOf(opts.markdown) === -1) {
+      console.log('Invalid markdown style. Options: ' + valid.join(', '));
+      process.exit();
+    }
+    process.argv.splice(i, 1);
+  } else if (arg.indexOf("--config=") > -1) {
+    configPath = arg.substring(9);
+    if (opts.logLevel) {
+      console.info("Command-line-argument-level config file specified at: ".cyan, configPath);
+    }
+    process.argv.splice(i, 1);
+  } else if (arg.indexOf("--head-injection=") > -1) {
+		opts.headInjection = arg.substring(17);
+		process.argv.splice(i, 1);
+	} else if (arg.indexOf("--body-injection=") > -1) {
+		opts.bodyInjection = arg.substring(17);
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--no-directories") {
+		opts.noDirectories = true;
 		process.argv.splice(i, 1);
 	}
 }
 
 // Patch paths
-var dir = opts.root = process.argv[2] || "";
+opts.root = process.argv[2] || process.cwd();
+var root_stats = fs.existsSync(opts.root);
+if (!root_stats) {
+  console.error("The specified ROOT directory '" + opts.root + "' does not exist.");
+  process.exit();
+}
+root_stats = fs.statSync(opts.root);
+if (!root_stats.isDirectory()) {
+  console.error("The specified ROOT path '" + opts.root + "' is not a directory.");
+  process.exit();
+}
+
+// When no config file has been specified, load a user-level or project-level one, iff available:
+if (!configPath) {
+  var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
+  if (homeDir) {
+    var userConfigPath = path.join(homeDir, '.live-server.json5');
+    if (fs.existsSync(userConfigPath)) {
+      if (opts.logLevel) {
+        console.log("User-level config file detected at: ".cyan, userConfigPath);
+      }
+      configPath = userConfigPath;
+    } else {
+      userConfigPath = path.join(homeDir, '.live-server.json');
+      if (fs.existsSync(userConfigPath)) {
+        if (opts.logLevel) {
+          console.log("User-level config file detected at: ".cyan, userConfigPath);
+        }
+        configPath = userConfigPath;
+      }
+    }
+  }
+}
+if (!configPath) {
+  var projectConfigPath = path.join(opts.root, '.live-server.json5');
+  if (fs.existsSync(projectConfigPath)) {
+    if (opts.logLevel) {
+      console.log("Project-level config file detected at: ".cyan, projectConfigPath);
+    }
+    configPath = projectConfigPath;
+  } else {
+    projectConfigPath = path.join(opts.root, '.live-server.json');
+    if (fs.existsSync(projectConfigPath)) {
+      if (opts.logLevel) {
+        console.log("Project-level config file detected at: ".cyan, projectConfigPath);
+      }
+      configPath = projectConfigPath;
+    }
+  }
+}
+
+// Note: if `configPath` is set, it MUST exist (or trigger a fatal error)
+if (configPath) {
+  var configData = fs.readFileSync(configPath, 'utf8');
+  assign(defaultOpts, JSON5.parse(configData));
+  if (defaultOpts.ignorePattern) defaultOpts.ignorePattern = new RegExp(defaultOpts.ignorePattern);
+}
+// Merge config file/default options and the ones obtained from the command line:
+assign(defaultOpts, opts);
+opts = defaultOpts;
 
 if (opts.watch) {
-	opts.watch = opts.watch.map(function(relativePath) {
-		return path.join(dir, relativePath);
-	});
+  opts.watch = opts.watch.map(function (relativePath) {
+    return path.join(opts.root, relativePath);
+  });
 }
 if (opts.ignore) {
-	opts.ignore = opts.ignore.map(function(relativePath) {
-		return path.join(dir, relativePath);
-	});
+  opts.ignore = opts.ignore.map(function (relativePath) {
+    return path.join(opts.root, relativePath);
+  });
 }
 
 liveServer.start(opts);

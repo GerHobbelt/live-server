@@ -35,6 +35,7 @@ describe('spa tests', function(){
 	it('spa-ignore-assets should not redirect .css', function(done){
 		request(liveServerSpaIgnoreAssets)
 			.get('/style.css')
+      .expect(/color: red/i)
 			.expect(200, done);
 	});
 });
