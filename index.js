@@ -795,7 +795,7 @@ LiveServer.start = function (options) {
 		.on("addDir", handleChange)
 		.on("unlinkDir", handleChange)
 		.on("ready", function () {
-			if (LiveServer.logLevel >= 1 || true)
+			if (LiveServer.logLevel >= 1)
 				console.log("Ready for changes".cyan);
 		})
 		.on("error", function (err) {
@@ -829,13 +829,6 @@ LiveServer.shutdown = function () {
   console.log("shutdown...");
 	var watcher = LiveServer.watcher;
 	if (watcher) {
-    var wl = watcher.getWatched();
-    watcher.unwatch(LiveServer.watchPaths);
-    var awl = [];
-    for (var key in wl) {
-      awl.push(key);
-    }
-    watcher.unwatch(awl);
 		watcher.close();
   }
   var server = LiveServer.server;
@@ -850,11 +843,11 @@ LiveServer.shutdown = function () {
       server.emit('close');
     });
   }
-  // chokidar doesn't terminate.
-  // throw exception to kill the app anyway
-  setTimeout(() => {
-    throw new Error("HACK: throw exception as long as https://github.com/paulmillr/chokidar/issues/855 has not been properly resolved");
-  }, 3000);
+  // // chokidar doesn't terminate.
+  // // throw exception to kill the app anyway
+  // setTimeout(() => {
+  //   throw new Error("HACK: throw exception as long as https://github.com/paulmillr/chokidar/issues/855 has not been properly resolved");
+  // }, 3000);
 };
 
 module.exports = LiveServer;
