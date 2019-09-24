@@ -18,9 +18,9 @@
     "@gerhobbelt/stream-sink": "2.2.2-5",
     "chokidar": "2.0.4",
     "colors": "1.3.3",
-    "connect": "3.6.6",
+    "connect": "3.7.0",
     "cors": "2.8.5",
-    "event-stream": "3.3.4",
+    "event-stream": "4.0.1",
     "faye-websocket": "0.11.3",
     "formidable": "1.2.1",
     "http-auth": "3.2.3",
@@ -30,7 +30,6 @@
     "object-assign": "4.1.1",
     "open": "6.4.0",
     "send": "0.17.1",
-    "serve-index": "1.9.1",
     "spdy": "4.0.1"
   },
   "devDependencies": {
