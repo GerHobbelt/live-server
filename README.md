@@ -1,6 +1,6 @@
 [![view on npm](http://img.shields.io/npm/v/live-server.svg)](https://www.npmjs.org/package/live-server)
 [![npm module downloads per month](http://img.shields.io/npm/dm/live-server.svg)](https://www.npmjs.org/package/live-server)
-[![build status](https://travis-ci.org/tapio/live-server.svg)](https://travis-ci.org/tapio/live-server)
+[![build status](https://travis-ci.org/GerHobbelt/live-server.svg)](https://travis-ci.org/GerHobbelt/live-server)
 
 Live Server
 ===========
@@ -14,7 +14,7 @@ There are two reasons for using this:
 
 You don't need to install any browser plugins or manually add code snippets to your pages for the reload functionality to work, see "How it works" section below for more information. If you don't want/need the live reload, you should probably use something even simpler, like the following Python-based one-liner:
 
-	python -m SimpleHTTPServer
+	python -m http.server
 
 
 Installation
@@ -22,7 +22,7 @@ Installation
 
 You need node.js and npm. You should probably install this globally.
 
-**Npm way**
+**npm way**
 
 	npm install -g live-server
 
@@ -37,7 +37,7 @@ You need node.js and npm. You should probably install this globally.
 Usage from command line
 -----------------------
 
-Issue the command `live-server` in your project's directory. Alternatively you can add the path to serve as a command line parameter.
+Issue the command `live-server` in your project's directory and this will serve the current directory by default. Alternatively, you can specify the path to serve as a command line parameter like so `live-server path/to/serve`.
 
 This will automatically launch the default browser. When you make a change to any file, the browser will reload the page - unless it was a CSS file in which case the changes are applied without a reload.
 
@@ -52,20 +52,29 @@ Command line parameters:
 * `--open=PATH` - launch browser to PATH instead of server root
 * `--watch=PATH` - comma-separated string of paths to exclusively watch for changes (default: watch everything)
 * `--ignore=PATH` - comma-separated string of paths to ignore ([anymatch](https://github.com/es128/anymatch)-compatible definition)
+* `--watch-dotfiles` - watch files whose paths include filenames beginning with `.` (dotfiles), rather than ignoring them (default: false)
 * `--ignorePattern=RGXP` - Regular expression of files to ignore (ie `.*\.jade`) (**DEPRECATED** in favor of `--ignore`)
-* `--no-css-inject` - reload page on CSS change, rather than injecting changed CSS
 * `--middleware=PATH` - path to .js file exporting a middleware function to add; can be a name without path nor extension to reference bundled middlewares in `middleware` folder
 * `--entry-file=PATH` - serve this file (server root relative) in place of missing files (useful for single page apps)
 * `--mount=ROUTE:PATH` - serve the paths contents under the defined route (multiple definitions possible)
+* `--no-directories` - disable directory listings
 * `--spa` - translate requests from /abc to /#/abc (handy for Single Page Apps)
+* `--spa-ignore-assets` - when `--spa` is passed, this option stops the server intercepting requests for any assets (CSS, JS and so on)
 * `--wait=MILLISECONDS` - (default 100ms) wait for all changes, before reloading
 * `--htpasswd=PATH` - Enables http-auth expecting htpasswd file located at PATH
 * `--cors` - Enables CORS for any origin (reflects request origin, requests with credentials are supported)
-* `--https=PATH` - PATH to a HTTPS configuration module
+* `--https[=PATH]` - PATH to a HTTPS configuration module; if no PATH is specified, a generic (expired) certification is used
 * `--https-module=MODULE_NAME` - Custom HTTPS module (e.g. `spdy`)
 * `--proxy=ROUTE:URL` - proxy all requests for ROUTE to URL
+* `--proxy-unsecure` - don't check hostname for https proxy requests (prevents *Hostname / IP doesn't match certificate's altname* error)
+* `--no-css-inject` - reload page on CSS change, rather than injecting changed CSS
+* `--config=FILE` - specify a JSON configuration file to be used. Inline arguments take precedence.
 * `--help | -h` - display terse usage hint and exit
 * `--version | -v` - display version and exit
+* `--no-markdown` - do not render markdown files as such
+* `--markdown=STYLE` - change the style of markdown rendering: html (default), hack, hack-dark, hack-light
+* `--injection=TEXT | --injection` - inject additional content to the pages
+* `[PATH]` - the directory which should be served, default: current working directory
 
 Default options:
 
@@ -84,11 +93,13 @@ var params = {
 	root: "/public", // Set root directory that's being served. Defaults to cwd.
 	open: false, // When false, it won't load your browser by default.
 	ignore: 'scss,my/templates', // comma-separated string for paths to ignore
+	watchDotfiles: true // watch dotfiles, rather than ignoring them
 	file: "index.html", // When set, serve this file (server root relative) for every 404 (useful for single-page applications)
 	wait: 1000, // Waits for all changes, before reloading. Defaults to 0 sec.
 	mount: [['/components', './node_modules']], // Mount a directory to a route.
 	logLevel: 2, // 0 = errors only, 1 = some, 2 = lots
-	middleware: [function(req, res, next) { next(); }] // Takes an array of Connect-compatible middleware that are injected into the server middleware stack
+	middleware: [function(req, res, next) { next(); }], // Takes an array of Connect-compatible middleware that are injected into the server middleware stack
+	injection: "<script>console.log('hi')</script>", // Inject additional script.
 };
 liveServer.start(params);
 ```
@@ -97,6 +108,7 @@ HTTPS
 ---------------
 
 In order to enable HTTPS support, you'll need to create a configuration module.
+If no module is provided, a generic, self-signed certification is used. This is **unsuitable for production** but works well for testing with zero-setup.
 The module must export an object that will be used to configure a HTTPS server.
 The keys are the same as the keys in `options` for [tls.createServer](https://nodejs.org/api/tls.html#tls_tls_createserver_options_secureconnectionlistener).
 
@@ -130,6 +142,7 @@ Troubleshooting
 ---------------
 
 * No reload on changes
+    * Ensure that your index file has `html`, `head` and `body` tags 
 	* Open your browser's console: there should be a message at the top stating that live reload is enabled. Note that you will need a browser that supports WebSockets. If there are errors, deal with them. If it's still not working, [file an issue](https://github.com/tapio/live-server/issues).
 * Error: watch <PATH> ENOSPC
 	* See [this suggested solution](http://stackoverflow.com/questions/22475849/node-js-error-enospc/32600959#32600959).
@@ -151,6 +164,10 @@ We welcome contributions! See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for det
 Version history
 ---------------
 
+* v1.3.1
+	- `--watch-dotfiles` to include file & directory names starting with `.` in the live-reload file watcher (@twome)
+* v1.3.0
+	- Add `--config` parameter to support specifying configuration files
 * v1.2.1
 	- `--https-module=MODULE_NAME` to specify custom HTTPS module (e.g. `spdy`) (@pavel)
 	- `--no-css-inject` to reload page on css change instead of injecting the changes (@kylecordes)
@@ -165,6 +182,7 @@ Version history
 	- HTTPS configuration now also accepts a plain object (@pavel)
 	- Move `--spa` to a bundled middleware file
 	- New bundled `spa-no-assets` middleware that works like `spa` but ignores requests with extension
+    - Add `--proxy-unsecure` parameter to allow overriding hostname check for https proxy requests (@miqmago)
 	- Allow multiple `--open` arguments (@PirtleShell)
 	- Inject to `head` if `body` not found (@pmd1991)
 	- Update dependencies

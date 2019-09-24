@@ -1,6 +1,6 @@
 {
-  "name": "live-server",
-  "version": "1.2.1",
+  "name": "@gerhobbelt/live-server",
+  "version": "1.3.1-27",
   "description": "simple development http server with live reload capability",
   "keywords": [
     "front-end",
@@ -12,46 +12,55 @@
   ],
   "author": "Tapio Vierros",
   "dependencies": {
-    "chokidar": "^2.0.4",
-    "colors": "latest",
-    "connect": "^3.6.6",
-    "cors": "latest",
+    "@gerhobbelt/json5": "2.1.0-48",
+    "@gerhobbelt/markdown-it": "8.4.2-25",
+    "@gerhobbelt/serve-index": "1.9.2-1",
+    "@gerhobbelt/stream-sink": "2.2.2-5",
+    "chokidar": "2.0.4",
+    "colors": "1.3.3",
+    "connect": "3.6.6",
+    "cors": "2.8.5",
     "event-stream": "3.3.4",
-    "faye-websocket": "0.11.x",
-    "http-auth": "3.1.x",
-    "morgan": "^1.9.1",
-    "object-assign": "latest",
-    "opn": "latest",
-    "proxy-middleware": "latest",
-    "send": "latest",
-    "serve-index": "^1.9.1"
+    "faye-websocket": "0.11.3",
+    "formidable": "1.2.1",
+    "http-auth": "3.2.3",
+    "http-proxy-middleware": "0.20.0",
+    "mkdirp": "0.5.1",
+    "morgan": "1.9.1",
+    "object-assign": "4.1.1",
+    "open": "6.4.0",
+    "send": "0.17.1",
+    "serve-index": "1.9.1",
+    "spdy": "4.0.1"
   },
   "devDependencies": {
-    "eslint": "^5.9.0",
-    "jshint": "^2.9.6",
-    "mocha": "^5.2.0",
-    "supertest": "^3.3.0"
+    "eslint": "6.4.0",
+    "mocha": "6.2.0",
+    "supertest": "4.0.2"
   },
   "scripts": {
     "lint": "eslint live-server.js index.js",
-    "hint": "jshint live-server.js index.js",
-    "test": "mocha test --exit && npm run lint"
+    "fix": "eslint --fix live-server.js index.js",
+    "test": "mocha test --timeout 5000 --exit && npm run lint",
+    "clear": "rm -f package-lock.json ; rm -rf node_modules",
+    "pub": "npm publish --access public"
   },
   "bin": {
     "live-server": "./live-server.js"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/tapio/live-server.git"
+    "url": "https://github.com/GerHobbelt/live-server.git"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=8.3.0"
   },
   "preferGlobal": true,
   "license": "MIT",
   "eslintConfig": {
     "env": {
-      "node": true
+      "node": true,
+      "es6": true
     },
     "rules": {
       "quotes": 0,
@@ -61,6 +70,9 @@
       "eqeqeq": 1,
       "no-unused-vars": 1,
       "no-shadow": 1
+    },
+    "parserOptions": {
+      "ecmaVersion": 8
     }
   }
 }

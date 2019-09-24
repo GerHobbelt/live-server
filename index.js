@@ -1,17 +1,22 @@
 #!/usr/bin/env node
 var fs = require('fs'),
-	connect = require('connect'),
-	serveIndex = require('serve-index'),
-	logger = require('morgan'),
-	WebSocket = require('faye-websocket'),
-	path = require('path'),
-	url = require('url'),
-	http = require('http'),
-	send = require('send'),
-	open = require('opn'),
-	es = require("event-stream"),
+  connect = require('connect'),
+  serveIndex = require('@gerhobbelt/serve-index'),
+  logger = require('morgan'),
+  WebSocket = require('faye-websocket'),
+  path = require('path'),
+  url = require('url'),
+  http = require('http'),
+  send = require('send'),
+  formidable = require('formidable'),
+  open = require('open'),
+  sink = require('@gerhobbelt/stream-sink'),
+  MarkdownIt = require('@gerhobbelt/markdown-it'),
+  es = require("event-stream"),
 	os = require('os'),
-	chokidar = require('chokidar');
+	chokidar = require('chokidar'),
+  mkdirp = require('mkdirp'),
+  proxyMiddleware = require('http-proxy-middleware');
 require('colors');
 
 var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
@@ -217,9 +222,21 @@ LiveServer.start = function(options) {
 	});
 	proxy.forEach(function(proxyRule) {
 		var proxyOpts = url.parse(proxyRule[1]);
-		proxyOpts.via = true;
-		proxyOpts.preserveHost = true;
-		app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
+		proxyOpts.changeOrigin = false;
+    //proxyOpts.changeOrigin = true;               // needed for virtual hosted sites
+    proxyOpts.preserveHost = true;
+    var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+    var serveURL = protocol + '://' + openHost + ':' + port;
+    proxyOpts.target = serveURL; 
+    console.error('proxy:', proxyOpts);
+    if (options.unsecureProxy) {
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+      proxyOpts.rejectUnauthorized = false;
+      proxyOpts.checkServerIdentity = function () {
+        return undefined;
+      };
+    }
+		app.use(proxyRule[0], proxyMiddleware('/', proxyOpts));
 		if (LiveServer.logLevel >= 1)
 			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
 	});
