@@ -772,6 +772,7 @@ LiveServer.start = function (options) {
 	LiveServer.watcher = chokidar.watch(watchPaths, {
 		ignored: ignoredPaths,
 		ignoreInitial: true,
+		disableGlobbing: true,
     atomic: 1000,              // treat editors' "Atomic writes" as such when they complete within 1 second. See https://github.com/paulmillr/chokidar#user-content-errors        
 	});
 	async function handleChange(changePath) {
