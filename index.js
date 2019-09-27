@@ -93,6 +93,7 @@ function staticServer(root, headInjection, bodyInjection) {
 		var injectBody = false;
 		var injectHead = false;
     var injectMarkdown = false;
+    var fileExt = "";
 
     function directory() {
       var pathname = url.parse(req.originalUrl).pathname;
@@ -117,7 +118,7 @@ function staticServer(root, headInjection, bodyInjection) {
         }
       }
 
-			match = (new RegExp("</\\s*body\\s*>", "i")).exec(contents);
+			var match = (new RegExp("</\\s*body\\s*>", "i")).exec(contents);
 			if (match) {
 				injectBody = true;
 			}
@@ -147,10 +148,10 @@ function staticServer(root, headInjection, bodyInjection) {
     }
 
     function file(filepath /*, stat*/) {
-      var x = path.extname(filepath).toLocaleLowerCase(),
-          possibleExtensions = [ "", ".html", ".htm", ".xhtml", ".php", ".svg" ];
-      if (hasNoOrigin && (possibleExtensions.indexOf(x) > -1)) {
-        // TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
+      fileExt = path.extname(filepath).toLocaleLowerCase();
+      var possibleExtensions = [ "", ".html", ".htm", ".xhtml", ".php", ".svg" ];
+			if (hasNoOrigin && (possibleExtensions.indexOf(fileExt) > -1)) {
+				// TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
         var contents = fs.readFileSync(filepath, "utf8");
         
         find_inject_tag(filepath, contents);
@@ -195,7 +196,7 @@ function staticServer(root, headInjection, bodyInjection) {
 				len += Buffer.byteLength(headInjection, 'utf8');
 				doInject = true;
 			}
-				var len = INJECTED_RELOAD_CODE.length + res.getHeader('Content-Length');
+			var len = INJECTED_RELOAD_CODE.length + res.getHeader('Content-Length');
 			if (doInject) {
         res.setHeader('Content-Length', len);
 
@@ -242,7 +243,10 @@ function staticServer(root, headInjection, bodyInjection) {
           });
         };
       }
-    }
+      else if (fileExt == ".wasm") {
+        res.setHeader('Content-Type', 'application/wasm');
+      }
+   }
 
     if (req.method === "POST" || req.method === "PUT") {
       var inlen = parseFloat(req.headers['content-length']);
