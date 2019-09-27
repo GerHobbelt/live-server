@@ -178,8 +178,14 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		opts.watchDotfiles = true;
 		process.argv.splice(i, 1);
 	}
+	else if (arg.indexOf("--logLevel=") > -1) {
+ 		var logLevelString = arg.substring(11);
+ 		var logLevelNumber = parseInt(logLevelString);
+ 		opts.logLevel = logLevelNumber;
+ 		process.argv.splice(i, 1);
+	}
   else if (arg === "--help" || arg === "-h") {
-    console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [-V|--verbose] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--no-css-inject] [--entry-file=PATH] [--spa] [--spa-ignore-assets] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https[=PATH]] [--https-module=MODULE_NAME] [--proxy=PATH] [--proxy-unsecure] [--config=FILE] [PATH]');
+    console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [-V|--verbose] [--logLevel=LOGLEVEL] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--no-css-inject] [--entry-file=PATH] [--spa] [--spa-ignore-assets] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https[=PATH]] [--https-module=MODULE_NAME] [--proxy=PATH] [--proxy-unsecure] [--config=FILE] [PATH]');
     process.exit();
   }
   else if (arg === "--test") {
