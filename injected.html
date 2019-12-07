@@ -25,7 +25,6 @@
 				else {
 					var changed = msg.data.split(/\/|\\/)[1];
 					var me = window.location.pathname.split('/')[1];
-					console.log('changed', changed, 'me', me);
 					if(changed == me) window.location.reload();
 				}
 			};
