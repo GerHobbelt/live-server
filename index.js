@@ -366,7 +366,7 @@ LiveServer.start = function(options) {
 		}
 		clients.forEach(function(ws) {
 			if (ws)
-				ws.send(cssChange ? 'refreshcss' : 'reload');
+				ws.send(cssChange ? 'refreshcss' : changePath);
 		});
 	}
 	LiveServer.watcher
