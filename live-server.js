@@ -190,7 +190,10 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
   }
   else if (arg === "--test") {
     // Hidden param for tests to exit automatically
-    setTimeout(liveServer.shutdown, 500);
+    setTimeout(() => {
+      liveServer.shutdown();
+      process.exit(0);
+    }, 500);
     process.argv.splice(i, 1);
   } else if (arg === "--no-markdown") {
     opts.markdown = false;

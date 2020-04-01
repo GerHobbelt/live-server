@@ -140,10 +140,14 @@ function staticServer(root, headInjection, bodyInjection) {
 			}
 
 			if (injectTag) {
-				console.log('Script is injected in the ' + injectTag + ' tag.');
+  	    if (LiveServer.logLevel >= 3) {
+          console.log('Script is injected in the ' + injectTag + ' tag.');
+        }
 			} else {
-        console.warn("Failed to inject refresh script!".yellow,
-          "Couldn't find any of the tags", injectCandidates, "from", filepath, "nor any other closing tag.");
+        if (LiveServer.logLevel >= 1) {
+          console.warn("Failed to inject refresh script!".yellow,
+            "Couldn't find any of the tags", injectCandidates, "from", filepath, "nor any other closing tag.");
+        }
       }
     }
 
@@ -172,7 +176,6 @@ function staticServer(root, headInjection, bodyInjection) {
             return next();
           }
 
-          console.error({err, rq: requestedFile, url: req.url});
 					res.statusCode = 404;
 					res.end(`<html><head><meta http-equiv="refresh" content="5"></head>
             <body><h1>404 not found</h1>
@@ -265,7 +268,9 @@ function staticServer(root, headInjection, bodyInjection) {
       var inlen = parseFloat(req.headers['content-length']);
       var intype = req.headers['content-type'];
 
-      console.log('request: ', req.method, req.url, req.headers, inlen, intype);
+      if (LiveServer.logLevel >= 3) {
+        console.log('request: ', req.method, req.url, req.headers, inlen, intype);
+      }
 
       // parse a file upload
       var form = new formidable.IncomingForm();
@@ -273,11 +278,13 @@ function staticServer(root, headInjection, bodyInjection) {
       form.multiples = true;
 
       form.parse(req, function (err, fields, files) {
-        console.log('request decoded fields and files: ', {
-          err: err, 
-          fields: fields, 
-          filelist: files
-        });
+        if (LiveServer.logLevel >= 3) {
+          console.log('request decoded fields and files: ', {
+            err: err, 
+            fields: fields, 
+            filelist: files
+          });
+        }
 
         var cbCalled = [];
         var fileResults = [];
@@ -285,7 +292,9 @@ function staticServer(root, headInjection, bodyInjection) {
 
         function copy_file_closure(ii) {
           function done(n, ex, msg) {
-            console.warn('file copy done? ', ii, n, msg, ex, cbCalled);
+            if (LiveServer.logLevel >= 3) {
+              console.warn('file copy done? ', ii, n, msg, ex, cbCalled);
+            }
 
             if (!cbCalled[n]) {
               fileResults[n] = {
@@ -330,14 +339,18 @@ function staticServer(root, headInjection, bodyInjection) {
         }
 
         function do_one_file(file_info) {
-          console.log('processing uploaded file: ', root, reqpath, file_info.name, file_info.type, file_info.size, file_info.path, file_info.lastModifiedDate);
+          if (LiveServer.logLevel >= 3) {
+            console.log('processing uploaded file: ', root, reqpath, file_info.name, file_info.type, file_info.size, file_info.path, file_info.lastModifiedDate);
+          }
 
           // when no actual file was uploaded in this slot, skip the slot!
           if (!file_info.name) return;
 
           var dstpath = root + '/' + reqpath + '/' + file_info.name.replace(/^[^a-z0-9_]/i, '_').replace(/[^a-z0-9_]$/i, '_').replace(/[^a-z0-9_\-\.]/i, '_');
           var dstpath2 = path.normalize(dstpath);
-          console.log('dstpath: ', dstpath, dstpath2, path.dirname(dstpath2));
+          if (LiveServer.logLevel >= 3) {
+            console.log('dstpath: ', dstpath, dstpath2, path.dirname(dstpath2));
+          }
           
           // closure:
           var cp = copy_file_closure(i);
@@ -352,7 +365,9 @@ function staticServer(root, headInjection, bodyInjection) {
         for (var key in files) {
           // copy file:
           var file_infos = files[key];
-          console.log('file_infos: ', file_infos, file_infos.length);
+          if (LiveServer.logLevel >= 3) {
+            console.log('file_infos: ', file_infos, file_infos.length);
+          }
           if (file_infos.length > 0) {
             for (var i2 = 0, fcnt = file_infos.length; i2 < fcnt; i2++) {
               var file_info = file_infos[i2];
@@ -366,12 +381,16 @@ function staticServer(root, headInjection, bodyInjection) {
 
         // and when there are no files at all...
         if (i === 0) {
-          console.log('no files uploaded at all!');
+          if (LiveServer.logLevel >= 3) {
+            console.log('no files uploaded at all!');
+          }
           resf('done', i);
         }
 
         function resf(mode) {
-          console.log('response: ', mode, arguments, res.statusCode);
+          if (LiveServer.logLevel >= 3) {
+            console.log('response: ', mode, arguments, res.statusCode);
+          }
 
           res.statusCode = 200;
           res.setHeader('Content-Type', 'text/plain');
@@ -562,7 +581,9 @@ LiveServer.start = function (options) {
     var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
     var serveURL = protocol + '://' + openHost + ':' + port;
     proxyOpts.target = serveURL; 
-    console.error('proxy:', proxyOpts);
+    if (LiveServer.logLevel >= 3) {
+      console.log('proxy:', proxyOpts);
+    }
     if (options.unsecureProxy) {
 			process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
       proxyOpts.rejectUnauthorized = false;
@@ -787,7 +808,9 @@ LiveServer.start = function (options) {
 			var ignoreThisPath = options.watchDotfiles ? false : notDotfileOrCwd.test(path.basename(testPath));
 			if (ignoreThisPath && LiveServer.logLevel >= 1) {
 				if (alreadyWarnedDotfiles === false) {
-					console.log('Ignoring files in paths beginning with ".", eg: %s\nUse "--watch-dotfiles" to also watch these.', path.basename(testPath));
+          if (LiveServer.logLevel >= 3) {
+	  				console.log('Ignoring files in paths beginning with ".", eg: %s\nUse "--watch-dotfiles" to also watch these.', path.basename(testPath));
+          }
 					alreadyWarnedDotfiles = true;
 				}
       }
@@ -808,7 +831,9 @@ LiveServer.start = function (options) {
     atomic: 1000,              // treat editors' "Atomic writes" as such when they complete within 1 second. See https://github.com/paulmillr/chokidar#user-content-errors        
 	});
 	async function handleChange(changePath) {
-    console.log("CHANGE:", changePath);
+    if (LiveServer.logLevel >= 1) {
+      console.log("CHANGE:", changePath);
+    }
 		var cssChange = path.extname(changePath) === ".css" && !noCssInject;
 
 		if (LiveServer.logLevel >= 1) {
@@ -862,47 +887,60 @@ LiveServer.start = function (options) {
   process.stdin.resume();
   process.stdin.setEncoding("utf-8");
 
-  process.on('SIGINT', function() {
-    console.log( "\nGracefully shutting down from SIGINT (Ctrl-C)" );
-    LiveServer.shutdown();
-    process.exit(1);
-  });
-
-  var input_data = "";
-
-  console.log(`
-
-    +-------------------------------------------------------------------+
-    |                                                                   |
-    | Type the word 'exit' and then ENTER key to terminate live_server. |
-    |                                                                   |
-    +-------------------------------------------------------------------+
-
-    `.yellow);
-  
-  process.stdin.on("data", function(input) {
-    input_data += input; // Reading input from STDIN
-    //console.error("DATA: ", input_data.toLowerCase());
-
-    // Be very lenient: any place the admin typed the letters "exit" 
-    // in an otherwise possibly larger input stream from stdio,
-    // terminate anyway!
-    if (input_data.toLowerCase().includes("exit")) {
-      console.log( "\nGracefully shutting down from EXIT admin command" );
+  try {
+    process.on('SIGINT', function() {
+      if (LiveServer.logLevel >= 1) {
+        console.log( "\nGracefully shutting down from SIGINT (Ctrl-C)" );
+      }
       LiveServer.shutdown();
-      process.exit(2);
-    }
-  });
+      process.exit(1);
+    });
 
-  process.stdin.on("end", function() {
-    //console.error("END: ", input_data.toLowerCase());
-  });
+    var input_data = "";
+
+    if (LiveServer.logLevel >= 1) {
+      console.log(`
+
+      +-------------------------------------------------------------------+
+      |                                                                   |
+      | Type the word 'exit' and then ENTER key to terminate live_server. |
+      |                                                                   |
+      +-------------------------------------------------------------------+
+
+      `.yellow);
+    }
+
+    process.stdin.on("data", function(input) {
+      input_data += input; // Reading input from STDIN
+      //console.error("DATA: ", input_data.toLowerCase());
+
+      // Be very lenient: any place the admin typed the letters "exit" 
+      // in an otherwise possibly larger input stream from stdio,
+      // terminate anyway!
+      if (input_data.toLowerCase().includes("exit")) {
+        if (LiveServer.logLevel >= 3) {
+          console.log( "\nGracefully shutting down from EXIT admin command" );
+        }
+        LiveServer.shutdown();
+        process.exit(2);
+      }
+    });
+
+    process.stdin.on("end", function() {
+      //console.error("END: ", input_data.toLowerCase());
+    });
+  }
+  catch (ex) {
+    console.error("stdin initialization failed. (Ignoring!)");
+  }
 
   return server;
 };
 
 LiveServer.shutdown = function () {
-  console.log("shutdown...");
+  if (LiveServer.logLevel >= 1) {
+    console.log("shutdown...");
+  }
 	var watcher = LiveServer.watcher;
 	if (watcher) {
 		watcher.close();
@@ -913,7 +951,9 @@ LiveServer.shutdown = function () {
     server.keepAliveTimeout = 1; // ensure keep-alive connections are closed ASAP 
     server.timeout = 1;
     server.close(() =>  {
-      console.log("server closed...");
+      if (LiveServer.logLevel >= 1) {
+        console.log("server closed...");
+      }
     });
     setImmediate(function () {
       server.emit('close');
