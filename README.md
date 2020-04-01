@@ -1,4 +1,4 @@
-[![view on npm](http://img.shields.io/npm/v/live-server.svg)](https://www.npmjs.org/package/live-server)
+[![view on npm](https://img.shields.io/npm/v/@gerhobbelt/live-server)](https://www.npmjs.com/package/@gerhobbelt/live-server)
 [![npm module downloads per month](http://img.shields.io/npm/dm/live-server.svg)](https://www.npmjs.org/package/live-server)
 [![build status](https://travis-ci.org/GerHobbelt/live-server.svg)](https://travis-ci.org/GerHobbelt/live-server)
 
