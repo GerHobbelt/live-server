@@ -166,15 +166,28 @@ function staticServer(root, headInjection, bodyInjection) {
 			if (err.status === 404) {
 				var accept = req.headers['accept'];
 				if (accept && accept.indexOf('text/html') >= 0) {
+          var requestedFile = req.url.replace(/[?#].*$/, '').replace(/^.*\/(?:index\.[a-z]*$)?/, '');
+          if (requestedFile === '') {
+            // directory index requested. Fall through!
+            return next();
+          }
+
+          console.error({err, rq: requestedFile, url: req.url});
 					res.statusCode = 404;
-					res.end('<html><head><meta http-equiv="refresh" content="5"></head><body>404 not found - will attempt to reload in 5 seconds</body></html>');
-					return;
+					res.end(`<html><head><meta http-equiv="refresh" content="5"></head>
+            <body><h1>404 not found</h1>
+            <p>Error message: ${err}</p>
+            <hr>
+            <p>Will attempt to reload in 5 seconds...</p>
+            <p>Or you can go to the home page <a href="/">by clicking here</a>.<p>
+            </body></html>`);
+          return;
 				} else {
 					if (LiveServer.logLevel >= 3) {
 						console.warn("Didn't find text/html in ACCEPT header, so using default handler. ACCEPT header = ", accept);
 					}
-					return next();
 				}
+        return next();
 			}
       next(err);
     }
@@ -845,7 +858,37 @@ LiveServer.start = function (options) {
 			});
 		}
 	};
-	
+
+  process.stdin.resume();
+  process.stdin.setEncoding("utf-8");
+
+  process.on('SIGINT', function() {
+    console.log( "\nGracefully shutting down from SIGINT (Ctrl-C)" );
+    LiveServer.shutdown();
+    process.exit(1);
+  });
+
+  var input_data = "";
+
+  console.log("\n\n### Type the word 'exit' and then ENTER key to terminate the server. ###\n\n");
+  process.stdin.on("data", function(input) {
+    input_data += input; // Reading input from STDIN
+    //console.error("DATA: ", input_data.toLowerCase());
+
+    // Be very lenient: any place the admin typed the letters "exit" 
+    // in an otherwise possibly larger input stream from stdio,
+    // terminate anyway!
+    if (input_data.toLowerCase().includes("exit")) {
+      console.log( "\nGracefully shutting down from EXIT admin command" );
+      LiveServer.shutdown();
+      process.exit(2);
+    }
+  });
+
+  process.stdin.on("end", function() {
+    //console.error("END: ", input_data.toLowerCase());
+  });
+
   return server;
 };
 
