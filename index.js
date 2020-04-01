@@ -16,7 +16,7 @@ var fs = require('fs'),
 	os = require('os'),
 	chokidar = require('chokidar'),
   mkdirp = require('mkdirp'),
-  proxyMiddleware = require('http-proxy-middleware');
+  { createProxyMiddleware } = require('http-proxy-middleware');
 require('colors');
 
 var INJECTED_RELOAD_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
@@ -157,7 +157,7 @@ function staticServer(root, headInjection, bodyInjection) {
         find_inject_tag(filepath, contents);
       }
 
-      if (LiveServer.markdownStyle && x === '.md') {
+      if (LiveServer.markdownStyle && fileExt === '.md') {
         injectMarkdown = true;
       }
     }
@@ -243,7 +243,7 @@ function staticServer(root, headInjection, bodyInjection) {
           });
         };
       }
-      else if (fileExt == ".wasm") {
+      else if (fileExt === ".wasm") {
         res.setHeader('Content-Type', 'application/wasm');
       }
    }
@@ -520,11 +520,12 @@ LiveServer.start = function (options) {
 	// Use http-auth if configured
 	if (htpasswd !== null) {
 		var auth = require('http-auth');
+    var authConnect = require('http-auth-connect');
 		var basic = auth.basic({
 			realm: "Please authorize",
 			file: htpasswd
 		});
-		app.use(auth.connect(basic));
+		app.use(authConnect(basic));
 	}
 	if (cors) {
 		app.use(require("cors")({
@@ -556,7 +557,7 @@ LiveServer.start = function (options) {
         return undefined;
       };
     }
-		app.use(proxyRule[0], proxyMiddleware('/', proxyOpts));
+		app.use(proxyRule[0], createProxyMiddleware('/', proxyOpts));
 		if (LiveServer.logLevel >= 1)
 			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
 	});
