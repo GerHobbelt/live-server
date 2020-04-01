@@ -870,7 +870,16 @@ LiveServer.start = function (options) {
 
   var input_data = "";
 
-  console.log("\n\n### Type the word 'exit' and then ENTER key to terminate the server. ###\n\n");
+  console.log(`
+
+    +-------------------------------------------------------------------+
+    |                                                                   |
+    | Type the word 'exit' and then ENTER key to terminate live_server. |
+    |                                                                   |
+    +-------------------------------------------------------------------+
+
+    `.yellow);
+  
   process.stdin.on("data", function(input) {
     input_data += input; // Reading input from STDIN
     //console.error("DATA: ", input_data.toLowerCase());
