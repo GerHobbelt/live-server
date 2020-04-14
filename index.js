@@ -94,8 +94,13 @@ function staticServer(root) {
 			.on('directory', directory)
 			.on('file', file)
 			.on('stream', inject)
+			.on('headers', headers)
 			.pipe(res);
 	};
+}
+
+function headers (res, path, stat) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
 }
 
 /**
