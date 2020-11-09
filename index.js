@@ -18,7 +18,7 @@ var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8
 
 var LiveServer = {
 	server: null,
-	ws: null,
+	wsready: null,
 	watcher: null,
 	logLevel: 2
 };
@@ -318,7 +318,9 @@ LiveServer.start = function(options) {
 	server.addListener('upgrade', function(request, socket, head) {
 		var ws = new WebSocket(request, socket, head);
 
-		LiveServer.ws = ws;
+		if(LiveServer.wsready) {
+			LiveServer.wsready(ws);
+		}
 
 		ws.onopen = function() { ws.send('connected'); };
 
