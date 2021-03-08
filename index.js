@@ -152,6 +152,7 @@ LiveServer.start = function(options) {
 	var middleware = options.middleware || [];
 	var noCssInject = options.noCssInject;
 	var httpsModule = options.httpsModule;
+	var setws = options.setws || null;
 
 	if (httpsModule) {
 		try {
@@ -318,11 +319,13 @@ LiveServer.start = function(options) {
 	server.addListener('upgrade', function(request, socket, head) {
 		var ws = new WebSocket(request, socket, head);
 
-		if(LiveServer.wsready) {
-			LiveServer.wsready(ws);
+		if(setws) {
+			setws(ws);
 		}
 
-		ws.onopen = function() { ws.send('connected'); };
+		ws.onopen = function() {
+			ws.send('connected');
+		};
 
 		if (wait > 0) {
 			(function() {
