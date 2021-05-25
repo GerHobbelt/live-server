@@ -30,6 +30,7 @@
     "morgan": "1.10.0",
     "object-assign": "4.1.1",
     "open": "7.0.3",
+    "qrcode-terminal": "0.12.0",
     "send": "0.17.1",
     "spdy": "4.0.1"
   },

@@ -18,6 +18,7 @@ var fs = require('fs'),
   mkdirp = require('mkdirp'),
   { createProxyMiddleware } = require('http-proxy-middleware');
 require('colors');
+const qrcode = require('qrcode-terminal');
 
 var INJECTED_RELOAD_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
 
@@ -736,6 +737,10 @@ LiveServer.start = function (options) {
 
 		var serveURL = protocol + '://' + serveHost + ':' + address.port;
 		var openURL = protocol + '://' + openHost + ':' + address.port;
+
+		qrcode.generate(openURL, { small: true }, qrcode => {
+			console.log(qrcode);
+		});
 
 		var serveURLs = [ serveURL ];
 		if (LiveServer.logLevel > 2 && address.address === "0.0.0.0") {
