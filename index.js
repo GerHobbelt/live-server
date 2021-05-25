@@ -405,9 +405,14 @@ function staticServer(root, headInjection, bodyInjection) {
         .on('directory', directory)
         .on('file', file)
         .on('stream', inject)
+	  		.on('headers', headers)
         .pipe(res);
     }
   };
+}
+
+function headers (res, path, stat) {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 }
 
 /**
@@ -847,7 +852,7 @@ LiveServer.start = function (options) {
 
 		clients.forEach(function(ws) {
 			if (ws)
-				ws.send(cssChange ? 'refreshcss' : 'reload');
+				ws.send(cssChange ? 'refreshcss' : changePath);
 		});
 	}
 	LiveServer.watcher
