@@ -13,31 +13,31 @@
   "author": "Tapio Vierros",
   "dependencies": {
     "@gerhobbelt/json5": "2.1.0-48",
-    "@gerhobbelt/markdown-it": "10.0.0-30",
+    "@gerhobbelt/markdown-it": "12.0.4-53",
     "@gerhobbelt/serve-index": "1.9.2-1",
     "@gerhobbelt/stream-sink": "2.2.2-5",
-    "chokidar": "3.3.1",
+    "chokidar": "3.5.1",
     "colors": "1.4.0",
     "connect": "3.7.0",
     "cors": "2.8.5",
     "event-stream": "4.0.1",
-    "faye-websocket": "0.11.3",
+    "faye-websocket": "0.11.4",
     "formidable": "1.2.2",
-    "http-auth": "4.1.2",
+    "http-auth": "4.1.5",
     "http-auth-connect": "1.0.4",
-    "http-proxy-middleware": "1.0.3",
-    "mkdirp": "1.0.3",
+    "http-proxy-middleware": "2.0.0",
+    "mkdirp": "1.0.4",
     "morgan": "1.10.0",
     "object-assign": "4.1.1",
-    "open": "7.0.3",
+    "open": "8.2.0",
     "qrcode-terminal": "0.12.0",
     "send": "0.17.1",
-    "spdy": "4.0.1"
+    "spdy": "4.0.2"
   },
   "devDependencies": {
-    "eslint": "6.8.0",
-    "mocha": "7.1.1",
-    "supertest": "4.0.2"
+    "eslint": "7.27.0",
+    "mocha": "8.4.0",
+    "supertest": "6.1.3"
   },
   "scripts": {
     "lint": "eslint live-server.js index.js",
