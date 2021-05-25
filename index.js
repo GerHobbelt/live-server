@@ -468,6 +468,7 @@ function getIPAdress(){
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
  * @param middleware {array} Append middleware to stack, e.g. [function (req, res, next) { next(); }].
  * @param watchDotfiles Don't ignore changes to files & folders beginning with '.' from the watch directory
+ * @param mimetypes {object} MIME Types of extended files.
  * @param cors {boolean} Enables CORS for any origin (reflects request origin, requests with credentials are supported)
  * @param https {string} PATH to a HTTPS configuration module
  * @param proxy {string} Proxy all requests for ROUTE to URL (string format: "ROUTE:URL") 
@@ -500,6 +501,7 @@ LiveServer.start = function (options) {
 	var httpsModule = options.httpsModule;
 	var beforeReload = options.beforeReload || function noop() {};
 	var noDirectories = options.noDirectories || false;
+	var mimetypes = options.mimetypes || {};
 
   LiveServer.markdownStyle = options.markdown;
 
@@ -542,6 +544,19 @@ LiveServer.start = function (options) {
 		}
 		app.use(mw);
 	});
+
+	// Clear the default duplicate configuration
+	var mimetypesKeys = Object.keys(mimetypes);
+	Object.keys(send.mime.types).forEach(function(typesKey) {
+		var typesValue = send.mime.types[typesKey];
+
+		if (mimetypesKeys.indexOf(typesValue) > -1) {
+			delete send.mime.types[typesKey];
+			delete send.mime.extensions[typesValue];
+		}
+	});
+	// Set extended mimetypes
+	send.mime.define(mimetypes);
 
   var protocol;
   var httpsConfig = https;

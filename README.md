@@ -56,6 +56,7 @@ Command line parameters:
 * `--watch-dotfiles` - watch files whose paths include filenames beginning with `.` (dotfiles), rather than ignoring them (default: false)
 * `--ignorePattern=RGXP` - Regular expression of files to ignore (ie `.*\.jade`) (**DEPRECATED** in favor of `--ignore`)
 * `--middleware=PATH` - path to .js file exporting a middleware function to add; can be a name without path nor extension to reference bundled middlewares in `middleware` folder
+* `--mimetypes=MIMETYPES` - specify an object string to set the mime extension type or overwrite default configuration. (e.g. `"{'application/wasm': ['wasm']}"`) (you can find the default extended MIME type [here](https://github.com/broofa/mime/blob/v1.6.0/types.json))
 * `--entry-file=PATH` - serve this file (server root relative) in place of missing files (useful for single page apps)
 * `--mount=ROUTE:PATH` - serve the paths contents under the defined route (multiple definitions possible)
 * `--no-directories` - disable directory listings
@@ -101,6 +102,7 @@ var params = {
 	logLevel: 2, // 0 = errors only, 1 = some, 2 = lots, 3 = everything
 	middleware: [function(req, res, next) { next(); }], // Takes an array of Connect-compatible middleware that are injected into the server middleware stack
 	injection: "<script>console.log('hi')</script>", // Inject additional script.
+	mimetypes: { 'application/wasm': ['wasm'] }, // Set extended MIME types
 };
 liveServer.start(params);
 ```

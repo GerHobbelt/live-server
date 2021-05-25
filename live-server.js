@@ -184,6 +184,13 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
  		opts.logLevel = logLevelNumber;
  		process.argv.splice(i, 1);
 	}
+	else if (arg.indexOf("--mimetypes=") > -1) {
+		// e.g. --mimetypes="{'application/wasm': ['wasm']}"
+		var mimetypesString = arg.substring(12).replace(/'/g, '"');
+		var mimetypes = typeof opts.mimetypes === "object" && !(opts.mimetypes instanceof Array) ? opts.mimetypes : {};
+		opts.mimetypes = assign(mimetypes, JSON.parse(mimetypesString));
+		process.argv.splice(i, 1);
+	}
   else if (arg === "--help" || arg === "-h") {
     console.log('Usage: live-server [-v|--version] [-h|--help] [-q|--quiet] [-V|--verbose] [--logLevel=LOGLEVEL] [--port=PORT] [--host=HOST] [--open=PATH] [--no-browser] [--browser=BROWSER] [--ignore=PATH] [--ignorePattern=RGXP] [--no-css-inject] [--entry-file=PATH] [--spa] [--spa-ignore-assets] [--mount=ROUTE:PATH] [--wait=MILLISECONDS] [--htpasswd=PATH] [--cors] [--https[=PATH]] [--https-module=MODULE_NAME] [--proxy=PATH] [--proxy-unsecure] [--config=FILE] [PATH]');
     process.exit();
