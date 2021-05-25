@@ -56,6 +56,7 @@ var markdown = MarkdownIt({
 
 var LiveServer = {
   server: null,
+	wsready: null,
 	watcher: null,
   logLevel: 2
 };
@@ -502,6 +503,7 @@ LiveServer.start = function (options) {
 	var beforeReload = options.beforeReload || function noop() {};
 	var noDirectories = options.noDirectories || false;
 	var mimetypes = options.mimetypes || {};
+	var setws = options.setws || null;
 
   LiveServer.markdownStyle = options.markdown;
 
@@ -786,6 +788,11 @@ LiveServer.start = function (options) {
   var clients = [];
   server.addListener('upgrade', function (request, socket, head) {
     var ws = new WebSocket(request, socket, head);
+
+		if (setws) {
+			setws(ws);
+		}
+
     ws.onopen = function () { 
       ws.send('connected'); 
     };
