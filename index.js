@@ -475,6 +475,7 @@ function getIPAdress(){
  * @param https {string} PATH to a HTTPS configuration module
  * @param proxy {string} Proxy all requests for ROUTE to URL (string format: "ROUTE:URL") 
  * @param markdown {string} When non-NULL, render markdown files to HTML using the given style
+ * @param showUrlAsQRcode {boolean} When true, print each served URL as a QRcode in the console log output
  */
 LiveServer.start = function (options) {
   options = options || {};
@@ -505,6 +506,7 @@ LiveServer.start = function (options) {
 	var noDirectories = options.noDirectories || false;
 	var mimetypes = options.mimetypes || {};
 	var setws = options.setws || null;
+  var showUrlAsQRcode = options.showUrlAsQRcode || false;
 
   LiveServer.markdownStyle = options.markdown;
 
@@ -738,9 +740,11 @@ LiveServer.start = function (options) {
 		var serveURL = protocol + '://' + serveHost + ':' + address.port;
 		var openURL = protocol + '://' + openHost + ':' + address.port;
 
-		qrcode.generate(openURL, { small: true }, qrcode => {
-			console.log(qrcode);
-		});
+    if (showUrlAsQRcode) {
+  		qrcode.generate(openURL, { small: true }, qrcode_item => {
+  			console.log(qrcode_item);
+  		});
+    }
 
 		var serveURLs = [ serveURL ];
 		if (LiveServer.logLevel > 2 && address.address === "0.0.0.0") {

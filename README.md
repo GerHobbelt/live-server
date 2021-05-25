@@ -76,6 +76,7 @@ Command line parameters:
 * `--no-markdown` - do not render markdown files as such
 * `--markdown=STYLE` - change the style of markdown rendering: html (default), hack, hack-dark, hack-light
 * `--injection=TEXT | --injection` - inject additional content to the pages
+* `--showUrlAsQRcode` - print each served URL as a QRcode in the console log output
 * `[PATH]` - the directory which should be served, default: current working directory
 
 Default options:
