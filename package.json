@@ -1,6 +1,6 @@
 {
   "name": "@gerhobbelt/live-server",
-  "version": "1.3.3-31",
+  "version": "1.3.3-32",
   "description": "simple development http server with live reload capability",
   "keywords": [
     "front-end",
@@ -16,27 +16,27 @@
     "@gerhobbelt/markdown-it": "12.0.4-53",
     "@gerhobbelt/serve-index": "1.9.2-1",
     "@gerhobbelt/stream-sink": "2.2.2-5",
-    "chokidar": "3.5.1",
+    "chokidar": "3.5.2",
     "colors": "1.4.0",
     "connect": "3.7.0",
     "cors": "2.8.5",
     "event-stream": "4.0.1",
     "faye-websocket": "0.11.4",
     "formidable": "1.2.2",
-    "http-auth": "4.1.5",
-    "http-auth-connect": "1.0.4",
+    "http-auth": "4.1.7",
+    "http-auth-connect": "1.0.5",
     "http-proxy-middleware": "2.0.0",
     "mkdirp": "1.0.4",
     "morgan": "1.10.0",
     "object-assign": "4.1.1",
-    "open": "8.2.0",
+    "open": "8.2.1",
     "qrcode-terminal": "0.12.0",
     "send": "0.17.1",
     "spdy": "4.0.2"
   },
   "devDependencies": {
-    "eslint": "7.27.0",
-    "mocha": "8.4.0",
+    "eslint": "7.29.0",
+    "mocha": "9.0.1",
     "supertest": "6.1.3"
   },
   "scripts": {
