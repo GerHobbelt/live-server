@@ -22,7 +22,7 @@
     "cors": "2.8.5",
     "event-stream": "4.0.1",
     "faye-websocket": "0.11.4",
-    "formidable": "1.2.2",
+    "formidable": "3.2.4",
     "http-auth": "4.1.7",
     "http-auth-connect": "1.0.5",
     "http-proxy-middleware": "2.0.0",
