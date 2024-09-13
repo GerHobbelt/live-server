@@ -16,7 +16,7 @@
     "@gerhobbelt/markdown-it": "12.0.4-53",
     "@gerhobbelt/serve-index": "1.9.2-1",
     "@gerhobbelt/stream-sink": "2.2.2-5",
-    "chokidar": "3.5.2",
+    "chokidar": "4.0.0",
     "colors": "1.4.0",
     "connect": "3.7.0",
     "cors": "2.8.5",
